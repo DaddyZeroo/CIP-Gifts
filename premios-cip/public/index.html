@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canje de puntos · Premios CIP</title>
+<style>
+  :root{
+    --rojo:#B3121B; --rojo-osc:#8C0E15; --rojo-suave:#FBE9EA;
+    --tinta:#1C1B1B; --gris:#5F5C5C; --linea:#DAD6D3; --fondo:#F3F1EE; --blanco:#FFFFFF;
+    --ok:#1F7A3E; --ok-suave:#E4F3E9; --aviso:#8A5A00; --aviso-suave:#FFF3D6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--fondo);color:var(--tinta);font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;font-size:15px;line-height:1.45}
+  button,input,select{font:inherit}
+  h1,h2,h3{margin:0;font-weight:600;line-height:1.2}
+  h1{font-size:22px} h2{font-size:18px} h3{font-size:15px}
+
+  header{background:var(--blanco);border-bottom:3px solid var(--rojo);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  header .marca{display:flex;align-items:baseline;gap:12px}
+  header .marca span{color:var(--gris);font-size:14px}
+  nav{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  nav button{background:none;border:0;padding:8px 14px;border-radius:6px;color:var(--gris);cursor:pointer}
+  nav button:hover{background:var(--fondo);color:var(--tinta)}
+  nav button.activa{background:var(--rojo);color:#fff}
+  nav button:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--rojo);outline-offset:2px}
+  .sesion{display:flex;align-items:center;gap:10px;color:var(--gris);font-size:13px;border-left:1px solid var(--linea);padding-left:12px;margin-left:6px}
+
+  main{max-width:1280px;margin:0 auto;padding:24px 28px 60px}
+  .vista{display:none}.vista.activa{display:block}
+
+  .panel{background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:20px}
+  .fila{display:grid;gap:20px}
+  .canje{grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr)}
+  @media(max-width:960px){.canje{grid-template-columns:1fr}}
+
+  label{display:block;font-size:13px;color:var(--gris);margin-bottom:4px}
+  input[type=text],input[type=number],input[type=date],input[type=password]{width:100%;padding:9px 11px;border:1px solid var(--linea);border-radius:6px;background:#fff;color:var(--tinta)}
+  input[type=number]{text-align:right}
+  .campos{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:600px){.campos{grid-template-columns:1fr}}
+  .alta{background:var(--fondo);border:1px solid var(--linea);border-radius:8px;padding:14px 16px;margin-bottom:18px}
+  .alta h3{margin-bottom:10px}
+  .alta-campos{grid-template-columns:2fr 1fr 1fr auto;margin-bottom:0}
+  @media(max-width:760px){.alta-campos{grid-template-columns:1fr 1fr}}
+  .check{display:flex;align-items:center;gap:8px;padding:8px 0}
+  .check input{width:18px;height:18px;accent-color:var(--rojo)}
+
+  .btn{border:1px solid var(--linea);background:#fff;color:var(--tinta);padding:9px 16px;border-radius:6px;cursor:pointer}
+  .btn:hover{border-color:var(--gris)}
+  .btn.principal{background:var(--rojo);border-color:var(--rojo);color:#fff}
+  .btn.principal:hover{background:var(--rojo-osc)}
+  .btn.principal:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.peligro{color:var(--rojo);border-color:var(--rojo-suave);background:var(--rojo-suave)}
+  .btn.chico{padding:4px 10px;font-size:13px}
+  .acciones{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+
+  .grupo{margin-top:18px}
+  .grupo h3{display:flex;align-items:center;gap:10px;color:var(--rojo);padding-bottom:6px;border-bottom:1px solid var(--linea);margin-bottom:8px}
+  .grupo h3 small{color:var(--gris);font-weight:400;font-size:13px}
+  .premios{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+  .premio{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--linea);border-radius:6px;background:#fff}
+  .premio.elegido{border-color:var(--rojo);background:var(--rojo-suave)}
+  .premio .nom{font-size:14px;flex:1;min-width:0}
+  .premio .foto,.mini{width:56px;height:56px;object-fit:cover;border-radius:5px;background:var(--fondo);flex:none;border:1px solid var(--linea)}
+  .mini{width:44px;height:44px;vertical-align:middle;margin-right:6px}
+  .premio .foto.sin{display:flex;align-items:center;justify-content:center;color:var(--linea);font-size:22px}
+  .premio .nom small{display:block;color:var(--gris);font-size:12px}
+  .cant{display:flex;align-items:center;gap:4px}
+  .cant button{width:28px;height:28px;border:1px solid var(--linea);border-radius:5px;background:#fff;cursor:pointer;line-height:1}
+  .cant button:hover{border-color:var(--rojo);color:var(--rojo)}
+  .cant span{min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
+
+  .marcador{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:var(--blanco);padding:12px 0 8px;margin-bottom:4px}
+  .marcador div{border:1px solid var(--linea);border-radius:8px;padding:10px 12px}
+  .marcador b{display:block;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+  .marcador small{color:var(--gris)}
+  .marcador .neg b{color:var(--rojo)}
+  .marcador .rest b{color:var(--ok)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:var(--gris);font-weight:500;font-size:13px;padding:8px 8px;border-bottom:1px solid var(--linea)}
+  td{padding:8px;border-bottom:1px solid var(--linea);vertical-align:top}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  td input[type=text],td input[type=number]{padding:5px 8px}
+  td input[type=number]{width:96px;min-width:96px;font-size:15px}
+  td input[type=text]{min-width:220px}
+  .vacio{color:var(--gris);padding:24px 8px;text-align:center}
+  .lista-items{color:var(--gris);font-size:13px;margin:0;padding-left:16px}
+
+  .aviso{background:var(--aviso-suave);border:1px solid #F0D48A;color:var(--aviso);padding:10px 14px;border-radius:8px;font-size:14px;margin-bottom:16px}
+  .ok{background:var(--ok-suave);border:1px solid #BFE3CB;color:var(--ok);padding:10px 14px;border-radius:8px;font-size:14px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal[hidden]{display:none}
+  .modal-caja{background:#fff;border-radius:10px;padding:20px 22px;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .modal-caja p{margin:0;font-size:15px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 18px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;font-size:14px;z-index:60;max-width:90vw}
+  .toast.ver{opacity:1}
+  .encabezado{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .muted{color:var(--gris);font-size:13px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;background:var(--fondo);color:var(--gris)}
+  .tag.off{text-decoration:line-through}
+  details summary{cursor:pointer;color:var(--rojo);font-size:14px}
+  .menufoto{position:relative;display:inline-block}
+  .menufoto .opciones{display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:5;background:#fff;border:1px solid var(--linea);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:150px;padding:4px}
+  .menufoto.abierto .opciones{display:block}
+  .menufoto .opciones button,.menufoto .opciones label{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 10px;border-radius:4px;cursor:pointer;font-size:14px;color:var(--tinta)}
+  .menufoto .opciones button:hover,.menufoto .opciones label:hover{background:var(--fondo)}
+
+  /* Inicio de sesión */
+  #pantallaLogin{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  #pantallaLogin[hidden],#app[hidden]{display:none}
+  .login-caja{background:#fff;border:1px solid var(--linea);border-top:4px solid var(--rojo);border-radius:10px;padding:28px;width:100%;max-width:360px}
+  .login-caja h1{margin-bottom:4px}
+  .login-caja .campo{margin-top:14px}
+  .error{color:var(--rojo);font-size:14px;min-height:20px;margin-top:10px}
+  .cargando{opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<!-- ===== INICIO DE SESIÓN ===== -->
+<section id="pantallaLogin" hidden>
+  <form class="login-caja" id="formLogin" autocomplete="on">
+    <h1>Premios CIP</h1>
+    <span class="muted">Inicia sesión para continuar</span>
+    <div class="campo"><label for="lUsuario">Usuario</label><input type="text" id="lUsuario" autocomplete="username" required></div>
+    <div class="campo"><label for="lPass">Contraseña</label><input type="password" id="lPass" autocomplete="current-password" required></div>
+    <div class="error" id="lError"></div>
+    <button class="btn principal" type="submit" style="width:100%;margin-top:6px">Entrar</button>
+  </form>
+</section>
+
+<div id="app" hidden>
+<header>
+  <div class="marca"><h1>Premios CIP</h1><span id="anioTitulo"></span></div>
+  <nav>
+    <button class="activa" data-v="canje">Canje</button>
+    <button data-v="premios">Premios</button>
+    <button data-v="historial">Historial</button>
+    <button data-v="respaldo">Respaldo</button>
+    <button data-v="usuarios">Usuarios</button>
+    <span class="sesion"><span id="yoNombre"></span><button class="btn chico" id="btnSalir" type="button">Cerrar sesión</button></span>
+  </nav>
+</header>
+
+<main>
+<!-- ===== CANJE ===== -->
+<section class="vista activa" id="v-canje">
+  <div class="fila canje">
+    <div class="panel">
+      <div class="campos">
+        <div><label for="fNombre">Nombre completo</label><input type="text" id="fNombre" placeholder=""></div>
+                <div><label for="fPuntos">Puntos disponibles</label><input type="number" id="fPuntos" min="0" step="1" placeholder="0"></div>
+      </div>
+
+      <div class="marcador">
+        <div><small>Puntos disponibles</small><b id="mDisp">0</b></div>
+        <div class="neg"><small>Puntos a usar</small><b id="mUsa">0</b></div>
+        <div class="rest"><small>Le quedan</small><b id="mRest">0</b></div>
+      </div>
+
+      <div id="catalogoCanje"></div>
+
+      <div class="acciones">
+        <button class="btn principal" id="btnAgregar">Agregar al lote</button>
+        <button class="btn" id="btnLimpiar">Limpiar formulario</button>
+        <span class="muted" id="msgCanje"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="encabezado"><h2>Lote actual</h2><span class="muted" id="loteConteo"></span></div>
+      <div id="tablaLote"></div>
+      <div class="acciones">
+        <button class="btn principal" id="btnCerrar">Cerrar lote y descargar Excel</button>
+        <button class="btn" id="btnExcelParcial">Descargar Excel sin cerrar</button>
+        <button class="btn peligro" id="btnVaciar">Vaciar lote</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PREMIOS ===== -->
+<section class="vista" id="v-premios">
+  <div class="panel">
+    <div class="encabezado">
+      <div><h2>Catálogo de premios</h2><span class="muted">Los cambios aplican a canjes nuevos. Los lotes ya cerrados conservan el premio y costo con el que se canjearon.</span></div>
+      <div><label for="cAnio">Nombre del catálogo</label><input type="text" id="cAnio" style="width:220px"></div>
+    </div>
+    <div class="alta">
+      <h3>Agregar premio nuevo</h3>
+      <div class="campos alta-campos">
+        <div><label for="nNombre">Nombre del premio</label><input type="text" id="nNombre" placeholder="Ej. Bocina bluetooth"></div>
+        <div><label for="nPuntos">Puntos</label><input type="number" id="nPuntos" min="1" step="1" placeholder="0"></div>
+        <div><label for="nMax">Máximo por persona</label><input type="number" id="nMax" min="0" step="1" placeholder="Sin límite"></div>
+        <div style="align-self:end"><button class="btn principal" id="btnNuevoPremio" style="width:100%">Agregar premio</button></div>
+      </div>
+    </div>
+    <div id="tablaPremios"></div>
+    <div class="acciones">
+      <span class="muted">Desactiva un premio para que no aparezca en el canje sin borrarlo del catálogo. Para la foto: toma una captura (Impr Pant o Win+Shift+S), pulsa "Pegar foto" y listo. Se guardan reducidas y se incluyen en el respaldo.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HISTORIAL ===== -->
+<section class="vista" id="v-historial">
+  <div class="panel">
+    <div class="encabezado"><h2>Lotes cerrados</h2><span class="muted">Puedes volver a descargar el Excel de cualquier lote.</span></div>
+    <div id="tablaHistorial"></div>
+  </div>
+</section>
+
+<!-- ===== RESPALDO ===== -->
+<section class="vista" id="v-respaldo">
+  <div class="panel">
+    <h2>Respaldo de la información</h2>
+    <p class="ok" style="margin-top:12px">La información (catálogo, lote actual, historial y fotos) se guarda en la base de datos del servidor y la comparten todos los usuarios. Aun así, conviene exportar un respaldo de vez en cuando y guardarlo en una carpeta segura de la empresa.</p>
+    <div class="acciones">
+      <button class="btn principal" id="btnExportar">Exportar respaldo (.json)</button>
+      <label class="btn" for="inpImportar" style="display:inline-block">Importar respaldo</label>
+      <input type="file" id="inpImportar" accept=".json,application/json" style="display:none">
+    </div>
+    <p class="muted" style="margin-top:16px">Al importar, la información del archivo reemplaza la que hay en la base de datos (los usuarios no se modifican). También acepta los respaldos .json de la versión anterior que funcionaba en un solo archivo HTML.</p>
+    <details style="margin-top:24px"><summary>Borrar toda la información</summary>
+      <div class="acciones"><button class="btn peligro" id="btnBorrarTodo">Borrar todo</button><span class="muted">Se restaura el catálogo inicial y se elimina el lote actual y el historial. Exporta un respaldo antes.</span></div>
+    </details>
+  </div>
+</section>
+
+<!-- ===== USUARIOS ===== -->
+<section class="vista" id="v-usuarios">
+  <div class="panel">
+    <div class="encabezado"><div><h2>Usuarios</h2><span class="muted">Personas que pueden entrar al sistema. Todas tienen los mismos permisos.</span></div></div>
+    <div class="alta">
+      <h3>Agregar usuario</h3>
+      <div class="campos alta-campos">
+        <div><label for="uNombre">Nombre de la persona</label><input type="text" id="uNombre" placeholder="Ej. Ana López"></div>
+        <div><label for="uUsuario">Usuario</label><input type="text" id="uUsuario" placeholder="ana.lopez" autocomplete="off"></div>
+        <div><label for="uPass">Contraseña (mín. 8)</label><input type="password" id="uPass" autocomplete="new-password"></div>
+        <div style="align-self:end"><button class="btn principal" id="btnNuevoUsuario" style="width:100%">Agregar usuario</button></div>
+      </div>
+    </div>
+    <div id="tablaUsuarios"></div>
+  </div>
+</section>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal" hidden><div class="modal-caja"><p id="modalTexto"></p><div class="acciones" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="modalNo">Cancelar</button><button class="btn principal" id="modalSi">Confirmar</button></div></div></div>
+
+<script>
+/* ==================== DATOS (servidor) ==================== */
+let D={anio:'',premios:[],lote:[],historial:[]}; // copia local de lo que hay en la base de datos
+let YO=null;          // usuario con sesión
+let seleccion = {};   // premioId -> cantidad
+let editandoId = null; // trabajador del lote en edición
+
+async function api(metodo, ruta, cuerpo){
+  const opciones={method:metodo, credentials:'same-origin', headers:{}};
+  if(metodo!=='GET'){ opciones.headers['Content-Type']='application/json'; opciones.body=JSON.stringify(cuerpo||{}); }
+  let r;
+  try{ r=await fetch(ruta,opciones); }catch(e){ throw new Error('Sin conexión con el servidor. Revisa tu internet.'); }
+  let j=null; try{ j=await r.json(); }catch(e){}
+  if(r.status===401 && ruta!=='/api/login'){ mostrarLogin(); throw new Error('Tu sesión terminó. Inicia sesión de nuevo.'); }
+  if(!r.ok) throw new Error(j?.error||`Error del servidor (${r.status})`);
+  return j;
+}
+async function recargar(){
+  D=await api('GET','/api/estado');
+  // Quita de la selección premios que ya no existen o se desactivaron
+  Object.keys(seleccion).forEach(id=>{ if(!D.premios.some(p=>p.id===id&&p.activo)) delete seleccion[id]; });
+  if(editandoId && !D.lote.some(t=>t.id===editandoId)){ editandoId=null; $('#btnAgregar').textContent='Agregar al lote'; $('#btnLimpiar').textContent='Limpiar formulario'; }
+  render();
+}
+// Ejecuta una operación en el servidor, recarga los datos y avisa.
+async function accion(fn, mensajeOk){
+  document.body.classList.add('cargando');
+  try{ const r=await fn(); await recargar(); if(mensajeOk) toast(mensajeOk); return r; }
+  catch(e){ toast(e.message); try{ await recargar(); }catch(_){} return undefined; }
+  finally{ document.body.classList.remove('cargando'); }
+}
+
+/* ==================== UTILIDADES ==================== */
+const $=s=>document.querySelector(s);
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('ver'); clearTimeout(t._x); t._x=setTimeout(()=>t.classList.remove('ver'),2800); }
+function confirmar(msg,textoSi){ return new Promise(res=>{ const m=$('#modal'); $('#modalTexto').textContent=msg; $('#modalSi').textContent=textoSi||'Confirmar'; m.hidden=false; $('#modalSi').focus();
+  const fin=v=>{ m.hidden=true; $('#modalSi').onclick=$('#modalNo').onclick=null; document.removeEventListener('keydown',tecla); res(v); };
+  const tecla=e=>{ if(e.key==='Escape') fin(false); };
+  $('#modalSi').onclick=()=>fin(true); $('#modalNo').onclick=()=>fin(false); document.addEventListener('keydown',tecla); m.onclick=e=>{ if(e.target===m) fin(false); }; }); }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fechaTxt(iso){ const d=new Date(iso); return d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}); }
+function fechaArchivo(iso){ const d=new Date(iso); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function descargar(nombre, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500); }
+
+/* ==================== SESIÓN ==================== */
+function mostrarLogin(){ YO=null; $('#app').hidden=true; $('#pantallaLogin').hidden=false; $('#lPass').value=''; setTimeout(()=>$('#lUsuario').focus(),0); }
+function mostrarApp(){ $('#pantallaLogin').hidden=true; $('#app').hidden=false; $('#yoNombre').textContent=YO?YO.nombre:''; }
+$('#formLogin').addEventListener('submit',async e=>{
+  e.preventDefault(); $('#lError').textContent='';
+  const btn=e.target.querySelector('button'); btn.disabled=true;
+  try{ await api('POST','/api/login',{usuario:$('#lUsuario').value,password:$('#lPass').value}); await iniciar(); }
+  catch(err){ $('#lError').textContent=err.message; }
+  finally{ btn.disabled=false; }
+});
+$('#btnSalir').addEventListener('click',async()=>{ try{ await api('POST','/api/logout'); }catch(e){} seleccion={}; editandoId=null; mostrarLogin(); });
+
+/* ==================== NAVEGACIÓN ==================== */
+document.querySelectorAll('nav button[data-v]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button[data-v]').forEach(x=>x.classList.toggle('activa',x===b));
+  document.querySelectorAll('.vista').forEach(v=>v.classList.toggle('activa',v.id==='v-'+b.dataset.v));
+  if(b.dataset.v==='usuarios') cargarUsuarios();
+  recargar().catch(e=>toast(e.message)); // trae los cambios que hayan hecho otros usuarios
+}));
+
+/* ==================== CANJE ==================== */
+function totalUsado(){ return Object.entries(seleccion).reduce((s,[id,c])=>{ const p=D.premios.find(x=>x.id===id); return s+(p?p.puntos*c:0); },0); }
+function renderCanje(){
+  $('#anioTitulo').textContent=D.anio;
+  const disp=Math.max(0,parseInt($('#fPuntos').value)||0), usa=totalUsado(), rest=disp-usa;
+  $('#mDisp').textContent=disp; $('#mUsa').textContent=usa; $('#mRest').textContent=rest;
+  $('#mRest').parentElement.className = rest<0?'neg':'rest';
+
+  const activos=D.premios.filter(p=>p.activo);
+  const grupos={}; activos.forEach(p=>(grupos[p.puntos]=grupos[p.puntos]||[]).push(p));
+  const cont=$('#catalogoCanje'); cont.innerHTML='';
+  if(!activos.length){ cont.innerHTML='<p class="vacio">No hay premios activos. Agrégalos en la pestaña Premios.</p>'; }
+  Object.keys(grupos).map(Number).sort((a,b)=>a-b).forEach(pts=>{
+    const g=document.createElement('div'); g.className='grupo';
+    g.innerHTML=`<h3>${pts} puntos <small>${grupos[pts].length} premio${grupos[pts].length!==1?'s':''}</small></h3><div class="premios"></div>`;
+    const lista=g.querySelector('.premios');
+    grupos[pts].forEach(p=>{
+      const c=seleccion[p.id]||0;
+      const el=document.createElement('div'); el.className='premio'+(c?' elegido':'');
+      el.innerHTML=`${p.foto?`<img class="foto" src="${esc(p.foto)}" alt="">`:`<div class="foto sin">🎁</div>`}<div class="nom">${esc(p.nombre)}${p.max?`<small>máximo ${p.max} por persona</small>`:''}</div>
+        <div class="cant"><button type="button" aria-label="Quitar uno" data-id="${esc(p.id)}" data-d="-1">−</button><span>${c}</span><button type="button" aria-label="Agregar uno" data-id="${esc(p.id)}" data-d="1">+</button></div>`;
+      lista.appendChild(el);
+    });
+    cont.appendChild(g);
+  });
+  $('#btnAgregar').disabled = !( $('#fNombre').value.trim() && usa>0 && rest>=0 );
+  $('#msgCanje').textContent = rest<0 ? 'Los puntos seleccionados superan los disponibles.' : '';
+}
+$('#catalogoCanje').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-id]'); if(!b) return;
+  const p=D.premios.find(x=>x.id===b.dataset.id); if(!p) return;
+  let c=(seleccion[p.id]||0)+Number(b.dataset.d);
+  if(c<0) c=0;
+  if(p.max && c>p.max){ toast(`Máximo ${p.max} por persona`); c=p.max; }
+  if(c) seleccion[p.id]=c; else delete seleccion[p.id];
+  renderCanje();
+});
+['fNombre','fPuntos'].forEach(id=>$('#'+id).addEventListener('input',renderCanje));
+function limpiarForm(){ seleccion={}; editandoId=null; $('#btnAgregar').textContent='Agregar al lote'; $('#btnLimpiar').textContent='Limpiar formulario'; $('#fNombre').value=''; $('#fPuntos').value=''; renderCanje(); $('#fNombre').focus(); }
+$('#btnLimpiar').addEventListener('click',()=>{ limpiarForm(); renderLote(); });
+$('#btnAgregar').addEventListener('click',async()=>{
+  const cuerpo={ id:editandoId||undefined, nombre:$('#fNombre').value.trim(), puntos:parseInt($('#fPuntos').value)||0,
+    items:Object.entries(seleccion).map(([premioId,cant])=>({premioId,cant})) };
+  const editaba=!!editandoId;
+  $('#btnAgregar').disabled=true;
+  const r=await accion(()=>api('POST','/api/lote',cuerpo), editaba?'Cambios guardados':'Trabajador agregado al lote');
+  if(r) limpiarForm(); else renderCanje();
+});
+
+function renderLote(){
+  $('#loteConteo').textContent = D.lote.length? `${D.lote.length} trabajador${D.lote.length!==1?'es':''}` : '';
+  const c=$('#tablaLote');
+  if(!D.lote.length){ c.innerHTML='<p class="vacio">Aún no hay trabajadores en este lote.</p>'; }
+  else c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Trabajador</th><th>Premios</th><th class="num">Usados</th><th class="num">Quedan</th><th></th></tr></thead><tbody>${
+    D.lote.map(t=>`<tr${editandoId===t.id?' style="background:var(--rojo-suave)"':''}><td><b>${esc(t.nombre)}</b><br><span class="muted">${t.puntos} pts iniciales${t.registradoPor?` · capturó ${esc(t.registradoPor)}`:''}</span></td>
+      <td><ul class="lista-items">${t.items.map(i=>`<li>${i.cant>1?i.cant+' × ':''}${esc(i.nombre)}</li>`).join('')}</ul></td>
+      <td class="num">${t.usados}</td><td class="num">${t.restantes}</td>
+      <td style="white-space:nowrap"><button class="btn chico" data-editar="${esc(t.id)}">Editar</button> <button class="btn chico" data-quitar="${esc(t.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table></div>`;
+  $('#btnCerrar').disabled=$('#btnExcelParcial').disabled=$('#btnVaciar').disabled=!D.lote.length;
+}
+$('#tablaLote').addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-editar]');
+  if(ed){ const t=D.lote.find(x=>x.id===ed.dataset.editar); if(!t) return;
+    editandoId=t.id; seleccion={}; let perdidos=[];
+    t.items.forEach(i=>{ const p=D.premios.find(x=>x.nombre===i.nombre&&x.puntos===i.puntos&&x.activo); if(p) seleccion[p.id]=i.cant; else perdidos.push(i.nombre); });
+    $('#fNombre').value=t.nombre; $('#fPuntos').value=t.puntos;
+    $('#btnAgregar').textContent='Guardar cambios'; $('#btnLimpiar').textContent='Cancelar edición';
+    renderCanje(); renderLote(); window.scrollTo({top:0,behavior:'smooth'}); $('#fNombre').focus();
+    toast(perdidos.length?`Editando. No se pudo cargar: ${perdidos.join(', ')} (ya no está en el catálogo)`:'Editando: corrige y pulsa "Guardar cambios"');
+    return; }
+  const b=e.target.closest('[data-quitar]'); if(!b) return;
+  if(!await confirmar('¿Eliminar a este trabajador del lote?','Eliminar')) return;
+  const id=b.dataset.quitar; if(editandoId===id) limpiarForm();
+  await accion(()=>api('DELETE','/api/lote/'+encodeURIComponent(id)),'Trabajador eliminado del lote');
+});
+$('#btnVaciar').addEventListener('click',async()=>{
+  if(!await confirmar(`Se eliminarán los ${D.lote.length} trabajador(es) del lote actual sin generar Excel. ¿Continuar?`,'Vaciar lote')) return;
+  limpiarForm(); await accion(()=>api('DELETE','/api/lote'),'Lote vaciado');
+});
+$('#btnExcelParcial').addEventListener('click',()=>{
+  const l={fecha:new Date().toISOString(),catalogo:D.anio,trabajadores:D.lote,premiosCol:D.premios.filter(p=>p.activo).map(p=>({nombre:p.nombre,puntos:p.puntos}))};
+  descargar(`Canje_${fechaArchivo(l.fecha)}_parcial.xlsx`, excelDeLote(l)); toast('Excel descargado');
+});
+$('#btnCerrar').addEventListener('click',async()=>{
+  if(!await confirmar(`Se cerrará el lote con ${D.lote.length} trabajador(es), se descargará el Excel y el lote pasará al historial. ¿Continuar?`,'Cerrar lote')) return;
+  const l=await accion(()=>api('POST','/api/lote/cerrar'),'Lote cerrado y Excel descargado');
+  if(l){ limpiarForm(); descargar(`Canje_${fechaArchivo(l.fecha)}.xlsx`, excelDeLote(l)); }
+});
+
+/* ==================== PREMIOS ==================== */
+$('#cAnio').addEventListener('change',e=>{ const anio=e.target.value.trim()||'Premios CIP'; accion(()=>api('PUT','/api/config',{anio}),'Nombre actualizado'); });
+function renderPremios(){
+  if(document.activeElement!==$('#cAnio')) $('#cAnio').value=D.anio;
+  const ordenados=[...D.premios].sort((a,b)=>a.puntos-b.puntos||a.nombre.localeCompare(b.nombre));
+  $('#tablaPremios').innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Foto</th><th style="width:38%">Premio</th><th class="num" style="width:110px">Puntos</th><th class="num" style="width:110px">Máx. por persona</th><th>Activo</th><th></th></tr></thead><tbody>${
+    ordenados.map(p=>{ const id=esc(p.id); return `<tr data-id="${id}">
+      <td style="white-space:nowrap">${p.foto?`<img class="mini" src="${esc(p.foto)}" alt="">`:''}<span class="menufoto"><button class="btn chico" data-menu="${id}">${p.foto?'Cambiar foto':'Agregar foto'} ▾</button><span class="opciones"><button data-pegar="${id}">Pegar captura</button><label>Elegir archivo<input type="file" accept="image/*" data-foto="${id}" hidden></label>${p.foto?`<button data-quitarfoto="${id}">Quitar foto</button>`:''}</span></span></td>
+      <td><input type="text" data-campo="nombre" value="${esc(p.nombre)}"></td>
+      <td class="num"><input type="number" data-campo="puntos" min="1" value="${p.puntos}" style="font-weight:600;color:var(--rojo);border-color:var(--rojo-suave);background:var(--rojo-suave)"></td>
+      <td class="num"><input type="number" data-campo="max" min="0" value="${p.max||0}" title="0 = sin límite"></td>
+      <td><input type="checkbox" data-campo="activo" ${p.activo?'checked':''} style="width:18px;height:18px;accent-color:var(--rojo)"></td>
+      <td><button class="btn chico" data-borrar="${id}">Borrar</button></td></tr>`; }).join('')}</tbody></table></div>
+    ${!ordenados.length?'<p class="vacio">El catálogo está vacío.</p>':''}`;
+}
+function subirFoto(blob,id){
+  return reducirImagen(blob,220)
+    .then(foto=>accion(()=>api('PUT',`/api/premios/${encodeURIComponent(id)}/foto`,{foto}),'Foto guardada'))
+    .catch(()=>toast('No se pudo leer la imagen. Prueba "Elegir archivo" con otra imagen.'));
+}
+$('#tablaPremios').addEventListener('change',e=>{
+  if(e.target.dataset.foto){ const f=e.target.files[0]; if(!f) return; subirFoto(f,e.target.dataset.foto); return; }
+  const tr=e.target.closest('tr[data-id]'); if(!tr) return;
+  const id=tr.dataset.id, campo=e.target.dataset.campo; const cambio={};
+  if(campo==='nombre'){ const v=e.target.value.trim(); if(!v){ renderPremios(); return; } cambio.nombre=v; }
+  if(campo==='puntos') cambio.puntos=Math.max(1,parseInt(e.target.value)||1);
+  if(campo==='max') cambio.max=Math.max(0,parseInt(e.target.value)||0);
+  if(campo==='activo') cambio.activo=e.target.checked;
+  delete seleccion[id];
+  accion(()=>api('PATCH','/api/premios/'+encodeURIComponent(id),cambio),'Premio actualizado');
+});
+let pegarObjetivo=null;
+async function pegarDesdePortapapeles(id){
+  pegarObjetivo=id;
+  try{ const items=await navigator.clipboard.read();
+    for(const it of items){ const t=it.types.find(x=>x.startsWith('image/')); if(t){ pegarObjetivo=null; subirFoto(await it.getType(t),id); return; } }
+    toast('No hay imagen en el portapapeles. Toma la captura y vuelve a intentar.');
+  }catch(e){ toast('Ahora presiona Ctrl+V para pegar la captura'); }
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.menufoto')) document.querySelectorAll('.menufoto.abierto').forEach(x=>x.classList.remove('abierto')); });
+document.addEventListener('paste',e=>{
+  if(!pegarObjetivo) return;
+  const it=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'));
+  if(it){ e.preventDefault(); const id=pegarObjetivo; pegarObjetivo=null; subirFoto(it.getAsFile(),id); } else toast('El portapapeles no tiene una imagen');
+});
+$('#tablaPremios').addEventListener('click',async e=>{
+  const m=e.target.closest('[data-menu]'); if(m){ const cont=m.parentElement; const abierto=cont.classList.contains('abierto'); document.querySelectorAll('.menufoto.abierto').forEach(x=>x.classList.remove('abierto')); if(!abierto) cont.classList.add('abierto'); return; }
+  const pg=e.target.closest('[data-pegar]'); if(pg){ pg.closest('.menufoto').classList.remove('abierto'); pegarDesdePortapapeles(pg.dataset.pegar); return; }
+  const q=e.target.closest('[data-quitarfoto]'); if(q){ accion(()=>api('DELETE',`/api/premios/${encodeURIComponent(q.dataset.quitarfoto)}/foto`),'Foto quitada'); return; }
+  const b=e.target.closest('[data-borrar]'); if(!b) return;
+  const p=D.premios.find(x=>x.id===b.dataset.borrar); if(!p) return;
+  if(!await confirmar(`¿Borrar "${p.nombre}" del catálogo? Los lotes cerrados no se modifican.`,'Borrar')) return;
+  delete seleccion[p.id];
+  accion(()=>api('DELETE','/api/premios/'+encodeURIComponent(p.id)),'Premio borrado');
+});
+$('#btnNuevoPremio').addEventListener('click',async()=>{
+  const nombre=$('#nNombre').value.trim(), puntos=parseInt($('#nPuntos').value), max=Math.max(0,parseInt($('#nMax').value)||0);
+  if(!nombre){ toast('Escribe el nombre del premio'); $('#nNombre').focus(); return; }
+  if(!puntos||puntos<1){ toast('Indica cuántos puntos cuesta'); $('#nPuntos').focus(); return; }
+  const r=await accion(()=>api('POST','/api/premios',{nombre,puntos,max}),'Premio agregado');
+  if(r){ $('#nNombre').value=''; $('#nPuntos').value=''; $('#nMax').value=''; $('#nNombre').focus(); }
+});
+['nNombre','nPuntos','nMax'].forEach(id=>$('#'+id).addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnNuevoPremio').click(); }));
+
+function reducirImagen(file,max){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onerror=()=>rej();
+    r.onload=()=>{
+      const dataUrl=r.result;
+      const img=new Image();
+      img.onload=()=>{
+        try{
+          const k=Math.min(1,max/Math.max(img.width,img.height));
+          const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*k)); c.height=Math.max(1,Math.round(img.height*k));
+          const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height);
+          res(c.toDataURL('image/jpeg',0.82));
+        }catch(e){ res(dataUrl); }
+      };
+      img.onerror=()=>{ if(dataUrl.length<400000) res(dataUrl); else rej(); };
+      img.src=dataUrl;
+    };
+    r.readAsDataURL(file);
+  });
+}
+/* ==================== HISTORIAL ==================== */
+function renderHistorial(){
+  const c=$('#tablaHistorial');
+  if(!D.historial.length){ c.innerHTML='<p class="vacio">Todavía no hay lotes cerrados.</p>'; return; }
+  const abiertos=[...c.querySelectorAll('tr[id^="det-"]')].filter(x=>x.style.display!=='none').map(x=>x.id);
+  c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Fecha de cierre</th><th>Catálogo</th><th class="num">Trabajadores</th><th class="num">Puntos canjeados</th><th></th></tr></thead><tbody>${
+    D.historial.map(l=>{ const id=esc(l.id); return `<tr><td>${fechaTxt(l.fecha)}${l.cerradoPor?`<br><span class="muted">cerró ${esc(l.cerradoPor)}</span>`:''}</td><td>${esc(l.catalogo)}</td><td class="num">${l.trabajadores.length}</td><td class="num">${l.trabajadores.reduce((s,t)=>s+t.usados,0)}</td>
+      <td style="white-space:nowrap"><button class="btn chico principal" data-xlsx="${id}">Descargar Excel</button> <button class="btn chico" data-ver="${id}">Ver</button> <button class="btn chico" data-elim="${id}">Eliminar</button></td></tr>
+      <tr id="det-${id}" style="display:${abiertos.includes('det-'+l.id)?'':'none'}"><td colspan="5"><table><thead><tr><th>Trabajador</th><th>Premios</th><th class="num">Iniciales</th><th class="num">Usados</th><th class="num">Quedan</th></tr></thead><tbody>${
+        l.trabajadores.map(t=>`<tr><td>${esc(t.nombre)}</td><td>${t.items.map(i=>`${i.cant>1?i.cant+' × ':''}${esc(i.nombre)}`).join(', ')}</td><td class="num">${t.puntos}</td><td class="num">${t.usados}</td><td class="num">${t.restantes}</td></tr>`).join('')}</tbody></table></td></tr>`; }).join('')}</tbody></table></div>`;
+}
+$('#tablaHistorial').addEventListener('click',async e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.xlsx){ const l=D.historial.find(x=>x.id===b.dataset.xlsx); if(!l) return; descargar(`Canje_${fechaArchivo(l.fecha)}.xlsx`, excelDeLote(l)); toast('Excel descargado'); }
+  if(b.dataset.ver){ const d=document.getElementById('det-'+b.dataset.ver); d.style.display=d.style.display==='none'?'':'none'; }
+  if(b.dataset.elim){ if(await confirmar('¿Eliminar este lote del historial? No podrás volver a descargar su Excel.','Eliminar')){ accion(()=>api('DELETE','/api/historial/'+encodeURIComponent(b.dataset.elim)),'Lote eliminado'); } }
+});
+
+/* ==================== RESPALDO ==================== */
+$('#btnExportar').addEventListener('click',async()=>{
+  try{ const j=await api('GET','/api/respaldo');
+    descargar(`Respaldo_PremiosCIP_${fechaArchivo(new Date().toISOString())}.json`, new Blob([JSON.stringify(j,null,2)],{type:'application/json'})); toast('Respaldo descargado');
+  }catch(e){ toast(e.message); }
+});
+$('#inpImportar').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=async()=>{ try{ const j=JSON.parse(r.result); if(!j.premios||!Array.isArray(j.historial)) throw 0;
+      if(f.size>4*1024*1024){ toast('El respaldo pesa más de 4 MB y el servidor no lo acepta. Quita algunas fotos o lotes antiguos.'); return; }
+      if(!await confirmar(`El respaldo contiene ${j.premios.length} premios, ${j.lote?.length||0} trabajadores en lote y ${j.historial.length} lotes cerrados. Reemplazará la información actual de la base de datos. ¿Continuar?`,'Importar')) return;
+      seleccion={}; editandoId=null;
+      await accion(()=>api('POST','/api/respaldo',{anio:j.anio,premios:j.premios,lote:j.lote||[],historial:j.historial}),'Respaldo importado');
+    }catch(err){ toast('El archivo no es un respaldo válido'); } finally{ e.target.value=''; } };
+  r.readAsText(f);
+});
+$('#btnBorrarTodo').addEventListener('click',async()=>{
+  if(!await confirmar('Se borrará TODO: catálogo, lote actual e historial. ¿Seguro?','Sí, borrar')) return;
+  if(!await confirmar('Última confirmación. ¿Borrar toda la información?','Borrar todo')) return;
+  seleccion={}; editandoId=null; await accion(()=>api('POST','/api/borrar-todo'),'Información borrada');
+});
+
+/* ==================== USUARIOS ==================== */
+let USUARIOS=[];
+async function cargarUsuarios(){ try{ USUARIOS=await api('GET','/api/usuarios'); renderUsuarios(); }catch(e){ toast(e.message); } }
+function renderUsuarios(){
+  $('#tablaUsuarios').innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Alta</th><th></th></tr></thead><tbody>${
+    USUARIOS.map(u=>`<tr><td>${esc(u.nombre)}${YO&&u.id===YO.id?' <span class="tag">tú</span>':''}</td><td>${esc(u.usuario)}</td><td>${fechaTxt(u.creado)}</td>
+      <td style="white-space:nowrap"><span data-caja="${u.id}" hidden><input type="password" placeholder="Nueva contraseña" autocomplete="new-password" style="width:180px;display:inline-block;padding:4px 8px"> <button class="btn chico principal" data-guardarpass="${u.id}">Guardar</button> </span><button class="btn chico" data-pass="${u.id}">Cambiar contraseña</button> <button class="btn chico" data-elimu="${u.id}" ${YO&&u.id===YO.id?'disabled title="No puedes eliminar tu propio usuario"':''}>Eliminar</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+$('#tablaUsuarios').addEventListener('click',async e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.pass){ const c=document.querySelector(`[data-caja="${b.dataset.pass}"]`); c.hidden=!c.hidden; if(!c.hidden) c.querySelector('input').focus(); return; }
+  if(b.dataset.guardarpass){ const inp=document.querySelector(`[data-caja="${b.dataset.guardarpass}"] input`);
+    try{ await api('PUT',`/api/usuarios/${b.dataset.guardarpass}/password`,{password:inp.value}); toast('Contraseña actualizada'); renderUsuarios(); }catch(err){ toast(err.message); } return; }
+  if(b.dataset.elimu){ const u=USUARIOS.find(x=>String(x.id)===b.dataset.elimu);
+    if(!await confirmar(`¿Eliminar al usuario "${u?.usuario}"? Ya no podrá entrar al sistema.`,'Eliminar')) return;
+    try{ await api('DELETE','/api/usuarios/'+b.dataset.elimu); toast('Usuario eliminado'); cargarUsuarios(); }catch(err){ toast(err.message); } }
+});
+$('#btnNuevoUsuario').addEventListener('click',async()=>{
+  try{ await api('POST','/api/usuarios',{nombre:$('#uNombre').value,usuario:$('#uUsuario').value,password:$('#uPass').value});
+    $('#uNombre').value=$('#uUsuario').value=$('#uPass').value=''; toast('Usuario agregado'); cargarUsuarios();
+  }catch(e){ toast(e.message); }
+});
+
+/* ==================== EXCEL (generador .xlsx sin librerías) ==================== */
+function excelDeLote(l){
+  // Columnas de premios: catálogo guardado al cerrar el lote (o el actual), más cualquier premio canjeado que ya no esté.
+  const base=(l.premiosCol||D.premios.filter(p=>p.activo)).map(p=>({n:p.nombre,p:p.puntos}));
+  l.trabajadores.forEach(t=>t.items.forEach(i=>{ if(!base.some(b=>b.n===i.nombre&&b.p===i.puntos)) base.push({n:i.nombre,p:i.puntos}); }));
+  const cols=base.sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n));
+  const cab=['Fecha de cierre','Catálogo','Trabajador','Puntos iniciales',...cols.map(c=>`${c.n} (${c.p} pts)`),'Puntos usados','Puntos restantes'];
+  const hoja1=[cab, ...l.trabajadores.map(t=>[fechaTxt(l.fecha),l.catalogo,t.nombre,t.puntos,
+    ...cols.map(c=>{ const it=t.items.find(i=>i.nombre===c.n&&i.puntos===c.p); return it?it.cant:null; }),t.usados,t.restantes])];
+  const hoja2=[['Trabajador','Premio','Costo (pts)','Cantidad','Subtotal (pts)']];
+  l.trabajadores.forEach(t=>t.items.forEach(i=>hoja2.push([t.nombre,i.nombre,i.puntos,i.cant,i.puntos*i.cant])));
+  const tot={}; l.trabajadores.forEach(t=>t.items.forEach(i=>{ const k=i.nombre+'|'+i.puntos; tot[k]=tot[k]||{n:i.nombre,p:i.puntos,c:0}; tot[k].c+=i.cant; }));
+  const hoja3=[['Premio','Costo (pts)','Unidades entregadas','Puntos totales'], ...Object.values(tot).sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n)).map(x=>[x.n,x.p,x.c,x.p*x.c])];
+  hoja3.push(['Total','',hoja3.slice(1).reduce((s,r)=>s+r[2],0),hoja3.slice(1).reduce((s,r)=>s+r[3],0)]);
+  return xlsx([{nombre:'Trabajadores',filas:hoja1,anchos:[17,17,28,10,...cols.map(()=>13),10,10],congelar:'E2',altoCab:48},{nombre:'Detalle',filas:hoja2,anchos:[30,45,11,10,13]},{nombre:'Resumen premios',filas:hoja3,anchos:[45,11,19,14]}]);
+}
+function xlsx(hojas){
+  const xe=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const col=n=>{ let s=''; n++; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
+  const hojaXml=h=>{
+    const cols=h.anchos?`<cols>${h.anchos.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`:'';
+    const filas=h.filas.map((f,r)=>`<row r="${r+1}"${r===0&&h.altoCab?` ht="${h.altoCab}" customHeight="1"`:''}>${f.map((v,c)=>{ const ref=col(c)+(r+1); const st=r===0?' s="1"':'';
+      if(typeof v==='number') return `<c r="${ref}"${st}><v>${v}</v></c>`;
+      if(v===null) return `<c r="${ref}" s="2"/>`;
+      if(v===''||v==null) return '';
+      return `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${xe(v)}</t></is></c>`; }).join('')}</row>`).join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0">${h.congelar?`<pane xSplit="${h.congelar.charCodeAt(0)-65}" ySplit="1" topLeftCell="${h.congelar}" activePane="bottomRight" state="frozen"/>`:`<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>`}</sheetView></sheetViews>${cols}<sheetData>${filas}</sheetData></worksheet>`;
+  };
+  const archivos=[
+    ['[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${hojas.map((h,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+    ['_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${hojas.map((h,i)=>`<sheet name="${xe(h.nombre)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`],
+    ['xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${hojas.map((h,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${hojas.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB3121B"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment wrapText="1" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="0" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ...hojas.map((h,i)=>[`xl/worksheets/sheet${i+1}.xml`,hojaXml(h)])
+  ];
+  return zip(archivos);
+}
+const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c=CRC[(c^b[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zip(archivos){
+  const enc=new TextEncoder(); const partes=[]; const central=[]; let off=0;
+  const d=new Date(); const hora=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1); const fecha=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  const u16=n=>[n&255,(n>>8)&255], u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  for(const [nombre,txt] of archivos){
+    const nom=enc.encode(nombre), datos=enc.encode(txt), crc=crc32(datos);
+    const loc=new Uint8Array([80,75,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(hora),...u16(fecha),...u32(crc),...u32(datos.length),...u32(datos.length),...u16(nom.length),...u16(0)]);
+    partes.push(loc,nom,datos);
+    central.push(new Uint8Array([80,75,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(hora),...u16(fecha),...u32(crc),...u32(datos.length),...u32(datos.length),...u16(nom.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nom);
+    off+=loc.length+nom.length+datos.length;
+  }
+  const cdLen=central.reduce((s,a)=>s+a.length,0);
+  const fin=new Uint8Array([80,75,5,6,...u16(0),...u16(0),...u16(archivos.length),...u16(archivos.length),...u32(cdLen),...u32(off),...u16(0)]);
+  return new Blob([...partes,...central,fin],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
+/* ==================== INICIO ==================== */
+function render(){ renderCanje(); renderLote(); renderPremios(); renderHistorial(); }
+async function iniciar(){
+  try{ YO=await api('GET','/api/me'); mostrarApp(); await recargar(); }
+  catch(e){ if(!YO) mostrarLogin(); else toast(e.message); }
+}
+iniciar();
+</script>
+</body>
+</html>

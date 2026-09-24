@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: premios
+      POSTGRES_USER: premios
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cambia-esta-clave}
+    volumes:
+      - datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U premios -d premios"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PUERTO:-3000}:3000"
+    environment:
+      DATABASE_URL: postgres://premios:${DB_PASSWORD:-cambia-esta-clave}@db:5432/premios
+      SESSION_SECRET: ${SESSION_SECRET:?Define SESSION_SECRET en el archivo .env}
+      ADMIN_USUARIO: ${ADMIN_USUARIO:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD en el archivo .env}
+
+volumes:
+  datos:

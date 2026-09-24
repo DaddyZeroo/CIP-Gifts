@@ -1,0 +1,16 @@
+{
+  "name": "premios-cip",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Canje de puntos por premios para trabajadores (Premios CIP) con base de datos PostgreSQL",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
