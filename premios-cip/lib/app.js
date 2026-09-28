@@ -7,6 +7,10 @@ const LIMITE_CUERPO = 4 * 1024 * 1024; // 4 MB (Vercel admite 4.5 MB)
 
 /* ---------- utilidades ---------- */
 function falla(status, mensaje) { return Object.assign(new Error(mensaje), { status }); }
+function requiereAdmin(usuario) {
+  const admin = String(process.env.ADMIN_USUARIO || '').trim().toLowerCase();
+  if (!admin || !usuario || usuario.usuario !== admin) throw falla(403, 'Se requieren permisos de administrador');
+}
 
 function enviar(res, status, datos, extra = {}) {
   const cuerpo = JSON.stringify(datos ?? {});
@@ -112,13 +116,15 @@ ruta('GET', '/api/me', async ({ usuario }) => usuario);
 ruta('GET', '/api/estado', async () => estado());
 
 // --- catálogo ---
-ruta('PUT', '/api/config', async ({ cuerpo }) => {
+ruta('PUT', '/api/config', async ({ cuerpo, usuario }) => {
+  requiereAdmin(usuario);
   const anio = texto(cuerpo.anio, 120) || 'Premios CIP';
   await query(`INSERT INTO config (clave, valor) VALUES ('anio',$1) ON CONFLICT (clave) DO UPDATE SET valor=EXCLUDED.valor`, [anio]);
   return { anio };
 });
 
-ruta('POST', '/api/premios', async ({ cuerpo }) => {
+ruta('POST', '/api/premios', async ({ cuerpo, usuario }) => {
+  requiereAdmin(usuario);
   const nombre = texto(cuerpo.nombre);
   if (!nombre) throw falla(400, 'Escribe el nombre del premio');
   const puntos = entero(cuerpo.puntos, 1, 'Puntos');
@@ -128,7 +134,8 @@ ruta('POST', '/api/premios', async ({ cuerpo }) => {
   return { id };
 });
 
-ruta('PATCH', '/api/premios/:id', async ({ params, cuerpo }) => {
+ruta('PATCH', '/api/premios/:id', async ({ params, cuerpo, usuario }) => {
+  requiereAdmin(usuario);
   const cambios = []; const valores = [];
   if ('nombre' in cuerpo) { const n = texto(cuerpo.nombre); if (n) { valores.push(n); cambios.push(`nombre=$${valores.length}`); } }
   if ('puntos' in cuerpo) { valores.push(entero(cuerpo.puntos, 1, 'Puntos')); cambios.push(`puntos=$${valores.length}`); }
@@ -141,19 +148,22 @@ ruta('PATCH', '/api/premios/:id', async ({ params, cuerpo }) => {
   return { ok: true };
 });
 
-ruta('DELETE', '/api/premios/:id', async ({ params }) => {
+ruta('DELETE', '/api/premios/:id', async ({ params, usuario }) => {
+  requiereAdmin(usuario);
   await query('DELETE FROM premios WHERE id=$1', [params.id]);
   return { ok: true };
 });
 
-ruta('PUT', '/api/premios/:id/foto', async ({ params, cuerpo }) => {
+ruta('PUT', '/api/premios/:id/foto', async ({ params, cuerpo, usuario }) => {
+  requiereAdmin(usuario);
   if (!fotoValida(cuerpo.foto)) throw falla(400, 'La imagen no es válida o es demasiado grande');
   const r = await query('UPDATE premios SET foto=$1, foto_v=$2 WHERE id=$3', [cuerpo.foto, Date.now(), params.id]);
   if (!r.rowCount) throw falla(404, 'El premio ya no existe');
   return { ok: true };
 });
 
-ruta('DELETE', '/api/premios/:id/foto', async ({ params }) => {
+ruta('DELETE', '/api/premios/:id/foto', async ({ params, usuario }) => {
+  requiereAdmin(usuario);
   await query('UPDATE premios SET foto=NULL, foto_v=NULL WHERE id=$1', [params.id]);
   return { ok: true };
 });
@@ -209,6 +219,7 @@ ruta('DELETE', '/api/lote', async () => {
 });
 
 ruta('POST', '/api/lote/cerrar', async ({ usuario }) => tx(async (c) => {
+  requiereAdmin(usuario);
   const t = await c.query('SELECT * FROM lote_actual ORDER BY orden FOR UPDATE');
   if (!t.rowCount) throw falla(400, 'El lote está vacío');
   const col = await c.query('SELECT nombre, puntos FROM premios WHERE activo ORDER BY orden');
@@ -227,7 +238,8 @@ ruta('POST', '/api/lote/cerrar', async ({ usuario }) => tx(async (c) => {
 }));
 
 // --- historial ---
-ruta('DELETE', '/api/historial/:id', async ({ params }) => {
+ruta('DELETE', '/api/historial/:id', async ({ params, usuario }) => {
+  requiereAdmin(usuario);
   await query('DELETE FROM lotes WHERE id=$1', [params.id]);
   return { ok: true };
 });
@@ -255,7 +267,8 @@ function limpiarTrabajador(t) {
   };
 }
 
-ruta('POST', '/api/respaldo', async ({ cuerpo }) => {
+ruta('POST', '/api/respaldo', async ({ cuerpo, usuario }) => {
+  requiereAdmin(usuario);
   if (!Array.isArray(cuerpo.premios) || !Array.isArray(cuerpo.historial)) throw falla(400, 'El archivo no es un respaldo válido');
   return tx(async (c) => {
     await c.query('DELETE FROM premios'); await c.query('DELETE FROM lote_actual'); await c.query('DELETE FROM lotes');
@@ -285,19 +298,24 @@ ruta('POST', '/api/respaldo', async ({ cuerpo }) => {
   });
 });
 
-ruta('POST', '/api/borrar-todo', async () => tx(async (c) => {
+ruta('POST', '/api/borrar-todo', async ({ usuario }) => {
+  requiereAdmin(usuario);
+  return tx(async (c) => {
   await c.query('DELETE FROM premios'); await c.query('DELETE FROM lote_actual'); await c.query('DELETE FROM lotes');
   await sembrarCatalogo(c);
   return { ok: true };
-}));
+  });
+});
 
 // --- usuarios ---
-ruta('GET', '/api/usuarios', async () => {
+ruta('GET', '/api/usuarios', async ({ usuario }) => {
+  requiereAdmin(usuario);
   const r = await query('SELECT id, usuario, nombre, creado FROM usuarios ORDER BY usuario');
   return r.rows;
 });
 
-ruta('POST', '/api/usuarios', async ({ cuerpo }) => {
+ruta('POST', '/api/usuarios', async ({ cuerpo, usuario: actor }) => {
+  requiereAdmin(actor);
   const usuario = texto(cuerpo.usuario, 40).toLowerCase();
   const nombre = texto(cuerpo.nombre, 80);
   const password = String(cuerpo.password || '');
@@ -310,7 +328,8 @@ ruta('POST', '/api/usuarios', async ({ cuerpo }) => {
   return { id: r.rows[0].id };
 });
 
-ruta('PUT', '/api/usuarios/:id/password', async ({ params, cuerpo }) => {
+ruta('PUT', '/api/usuarios/:id/password', async ({ params, cuerpo, usuario }) => {
+  requiereAdmin(usuario);
   const password = String(cuerpo.password || '');
   if (password.length < 8) throw falla(400, 'La contraseña debe tener al menos 8 caracteres');
   const r = await query('UPDATE usuarios SET hash=$1 WHERE id=$2', [await hashPassword(password), Number(params.id) || 0]);
@@ -319,6 +338,7 @@ ruta('PUT', '/api/usuarios/:id/password', async ({ params, cuerpo }) => {
 });
 
 ruta('DELETE', '/api/usuarios/:id', async ({ params, usuario }) => {
+  requiereAdmin(usuario);
   const id = Number(params.id) || 0;
   if (id === usuario.id) throw falla(400, 'No puedes eliminar tu propio usuario');
   const r = await query('DELETE FROM usuarios WHERE id=$1', [id]);
