@@ -1,4 +1,4 @@
-# Premios CIP — versión web
+# Premios CIP — aplicación web
 
 Canje de puntos por premios para trabajadores, ahora como aplicación web con base de datos PostgreSQL, inicio de sesión y varios usuarios.
 
@@ -11,9 +11,7 @@ El funcionamiento es el mismo que la versión de un solo archivo HTML: canje con
 
 ## 1. Subir el código a GitHub
 
-1. Crea una cuenta en <https://github.com> si no tienes.
-2. Crea un repositorio **privado** llamado `premios-cip`.
-3. En la página del repositorio elige **"uploading an existing file"** y arrastra todo el contenido de esta carpeta (no subas el archivo `.env`). Pulsa **Commit changes**.
+El repositorio actual es [`DaddyZeroo/CIP-Gifts`](https://github.com/DaddyZeroo/CIP-Gifts). La aplicación está dentro de `premios-cip/`; esa carpeta debe configurarse como **Root Directory** en Vercel.
 
 ## 2. Crear la base de datos en Neon
 
@@ -26,8 +24,8 @@ El funcionamiento es el mismo que la versión de un solo archivo HTML: canje con
 
 ## 3. Desplegar en Vercel
 
-1. Entra a <https://vercel.com> con tu cuenta de GitHub → **Add New… → Project** → importa `premios-cip`.
-2. **Framework Preset:** `Other`. No cambies los comandos de build.
+1. Entra a <https://vercel.com> con tu cuenta de GitHub → **Add New… → Project** → importa `DaddyZeroo/CIP-Gifts`.
+2. **Root Directory:** `premios-cip`. **Framework Preset:** `Other`. No hace falta un comando de build.
 3. En **Environment Variables** agrega:
 
 | Variable | Valor |
@@ -40,7 +38,7 @@ El funcionamiento es el mismo que la versión de un solo archivo HTML: canje con
 Para generar `SESSION_SECRET` puedes usar <https://generate-secret.vercel.app/32> o, si tienes Node:
 `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 
-4. Pulsa **Deploy**. Al terminar, abre la URL (`https://premios-cip-xxxx.vercel.app`) e inicia sesión con `ADMIN_USUARIO` / `ADMIN_PASSWORD`.
+4. Pulsa **Deploy**. Al terminar, abre la URL e inicia sesión con `ADMIN_USUARIO` / `ADMIN_PASSWORD`.
 5. La primera vez la app crea las tablas y carga el catálogo CIP 2026 + Hilti automáticamente.
 
 > Después de entrar, crea un usuario para cada persona en la pestaña **Usuarios**. `ADMIN_PASSWORD` solo se usa para crear el primer usuario; cambiarla después en Vercel no cambia la contraseña. Para cambiarla usa **Usuarios → Cambiar contraseña**.
@@ -65,6 +63,8 @@ docker compose up -d --build
 ```
 
 Abre <http://localhost:3000>. Desde otras PCs de la red: `http://IP-DE-ESA-PC:3000`.
+
+El archivo `.env` es local y nunca debe subirse a GitHub. Puedes comprobar el estado del servidor en <http://localhost:3000/salud>.
 
 - Ver logs: `docker compose logs -f app`
 - Detener: `docker compose down` (los datos se conservan en el volumen `datos`)
