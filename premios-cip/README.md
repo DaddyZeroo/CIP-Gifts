@@ -66,6 +66,10 @@ Abre <http://localhost:3000>. Desde otras PCs de la red: `http://IP-DE-ESA-PC:30
 
 El archivo `.env` es local y nunca debe subirse a GitHub. Puedes comprobar el estado del servidor en <http://localhost:3000/salud>.
 
+## Entorno demo
+
+Para publicar una demo aislada, crea otro proyecto de Vercel con otra base PostgreSQL y configura `DEMO_MODE=true`. La demo permite iniciar sesión y consultar el catálogo, pero rechaza todas las operaciones que modifican datos. Nunca conectes la demo a la base de datos privada.
+
 - Ver logs: `docker compose logs -f app`
 - Detener: `docker compose down` (los datos se conservan en el volumen `datos`)
 - Borrar también los datos: `docker compose down -v`

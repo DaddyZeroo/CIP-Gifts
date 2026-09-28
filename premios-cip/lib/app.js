@@ -360,6 +360,12 @@ async function manejar(req, res) {
     const r = cands.find((x) => x.metodo === req.method);
     if (!r) throw falla(405, 'Método no permitido');
 
+    // El despliegue de demostración puede compartir el código sin permitir
+    // que visitantes modifiquen su base de datos de ejemplo.
+    if (process.env.DEMO_MODE === 'true' && !['GET', 'HEAD'].includes(req.method) && ruta !== '/api/login' && ruta !== '/api/logout') {
+      throw falla(403, 'La demo es de solo lectura');
+    }
+
     const m = r.re.exec(ruta);
     const params = Object.fromEntries(r.claves.map((k, i) => [k, decodeURIComponent(m[i + 1])]));
 
