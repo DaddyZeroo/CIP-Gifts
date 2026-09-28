@@ -13,7 +13,6 @@ This project contains the web interface for the CIP Gifts experience, with the f
 ## Repository contents
 
 - `premios-cip`: web application source
-- `premios-cip-web.zip`: packaged web build
 
 ## Getting started
 
