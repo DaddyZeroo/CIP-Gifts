@@ -6,7 +6,9 @@ const { CATALOGO_INICIAL, uid } = require('./catalogo');
 let pool;
 function obtenerPool() {
   if (!pool) {
-    const url = process.env.DATABASE_URL;
+    const url = process.env.DEMO_MODE === 'true'
+      ? (process.env.DEMO_DATABASE_URL || process.env.DATABASE_URL)
+      : process.env.DATABASE_URL;
     if (!url) throw Object.assign(new Error('Falta la variable DATABASE_URL'), { status: 500 });
     pool = new Pool({ connectionString: url, max: process.env.VERCEL ? 3 : 10, idleTimeoutMillis: 10000 });
   }
