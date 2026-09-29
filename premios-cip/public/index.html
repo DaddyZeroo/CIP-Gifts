@@ -215,15 +215,13 @@
 <section class="vista" id="v-respaldo">
   <div class="panel">
     <h2>Respaldo de la información</h2>
-    <p class="ok" style="margin-top:12px">La información (catálogo, lote actual, historial y fotos) se guarda en la base de datos del servidor y la comparten todos los usuarios. Aun así, conviene exportar un respaldo de vez en cuando y guardarlo en una carpeta segura de la empresa.</p>
     <div class="acciones">
       <button class="btn principal" id="btnExportar">Exportar respaldo (.json)</button>
       <label class="btn" for="inpImportar" style="display:inline-block">Importar respaldo</label>
       <input type="file" id="inpImportar" accept=".json,application/json" style="display:none">
     </div>
-    <p class="muted" style="margin-top:16px">Al importar, la información del archivo reemplaza la que hay en la base de datos (los usuarios no se modifican). También acepta los respaldos .json de la versión anterior que funcionaba en un solo archivo HTML.</p>
     <details style="margin-top:24px"><summary>Borrar toda la información</summary>
-      <div class="acciones"><button class="btn peligro" id="btnBorrarTodo">Borrar todo</button><span class="muted">Se restaura el catálogo inicial y se elimina el lote actual y el historial. Exporta un respaldo antes.</span></div>
+      <div class="acciones"><button class="btn peligro" id="btnBorrarTodo">Borrar todo</button></div>
     </details>
   </div>
 </section>
@@ -358,15 +356,15 @@ $('#btnAgregar').addEventListener('click',async()=>{
     items:Object.entries(seleccion).map(([premioId,cant])=>({premioId,cant})) };
   const editaba=!!editandoId;
   $('#btnAgregar').disabled=true;
-  const r=await accion(()=>api('POST','/api/lote',cuerpo), editaba?'Cambios guardados':'Trabajador agregado al lote');
+  const r=await accion(()=>api('POST','/api/lote',cuerpo), editaba?'Cambios guardados':'Persona agregada al lote');
   if(r) limpiarForm(); else renderCanje();
 });
 
 function renderLote(){
-  $('#loteConteo').textContent = D.lote.length? `${D.lote.length} trabajador${D.lote.length!==1?'es':''}` : '';
+  $('#loteConteo').textContent = D.lote.length? `${D.lote.length} persona${D.lote.length!==1?'s':''}` : '';
   const c=$('#tablaLote');
-  if(!D.lote.length){ c.innerHTML='<p class="vacio">Aún no hay trabajadores en este lote.</p>'; }
-  else c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Trabajador</th><th>Premios</th><th class="num">Usados</th><th class="num">Quedan</th><th></th></tr></thead><tbody>${
+  if(!D.lote.length){ c.innerHTML='<p class="vacio">Aún no hay personas en este lote.</p>'; }
+  else c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Persona</th><th>Premios</th><th class="num">Usados</th><th class="num">Quedan</th><th></th></tr></thead><tbody>${
     D.lote.map(t=>`<tr${editandoId===t.id?' style="background:var(--rojo-suave)"':''}><td><b>${esc(t.nombre)}</b><br><span class="muted">${t.puntos} pts iniciales${t.registradoPor?` · capturó ${esc(t.registradoPor)}`:''}</span></td>
       <td><ul class="lista-items">${t.items.map(i=>`<li>${i.cant>1?i.cant+' × ':''}${esc(i.nombre)}</li>`).join('')}</ul></td>
       <td class="num">${t.usados}</td><td class="num">${t.restantes}</td>
@@ -384,12 +382,12 @@ $('#tablaLote').addEventListener('click',async e=>{
     toast(perdidos.length?`Editando. No se pudo cargar: ${perdidos.join(', ')} (ya no está en el catálogo)`:'Editando: corrige y pulsa "Guardar cambios"');
     return; }
   const b=e.target.closest('[data-quitar]'); if(!b) return;
-  if(!await confirmar('¿Eliminar a este trabajador del lote?','Eliminar')) return;
+  if(!await confirmar('¿Eliminar a esta persona del lote?','Eliminar')) return;
   const id=b.dataset.quitar; if(editandoId===id) limpiarForm();
-  await accion(()=>api('DELETE','/api/lote/'+encodeURIComponent(id)),'Trabajador eliminado del lote');
+  await accion(()=>api('DELETE','/api/lote/'+encodeURIComponent(id)),'Persona eliminada del lote');
 });
 $('#btnVaciar').addEventListener('click',async()=>{
-  if(!await confirmar(`Se eliminarán los ${D.lote.length} trabajador(es) del lote actual sin generar Excel. ¿Continuar?`,'Vaciar lote')) return;
+  if(!await confirmar(`Se eliminarán las ${D.lote.length} persona(s) del lote actual sin generar Excel. ¿Continuar?`,'Vaciar lote')) return;
   limpiarForm(); await accion(()=>api('DELETE','/api/lote'),'Lote vaciado');
 });
 $('#btnExcelParcial').addEventListener('click',()=>{
@@ -397,7 +395,7 @@ $('#btnExcelParcial').addEventListener('click',()=>{
   descargar(`Canje_${fechaArchivo(l.fecha)}_parcial.xlsx`, excelDeLote(l)); toast('Excel descargado');
 });
 $('#btnCerrar').addEventListener('click',async()=>{
-  if(!await confirmar(`Se cerrará el lote con ${D.lote.length} trabajador(es), se descargará el Excel y el lote pasará al historial. ¿Continuar?`,'Cerrar lote')) return;
+  if(!await confirmar(`Se cerrará el lote con ${D.lote.length} persona(s), se descargará el Excel y el lote pasará al historial. ¿Continuar?`,'Cerrar lote')) return;
   const l=await accion(()=>api('POST','/api/lote/cerrar'),'Lote cerrado y Excel descargado');
   if(l){ limpiarForm(); descargar(`Canje_${fechaArchivo(l.fecha)}.xlsx`, excelDeLote(l)); }
 });
