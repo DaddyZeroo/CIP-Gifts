@@ -54,18 +54,46 @@ function fotoValida(f) {
 }
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* ---------- estatus por premio: pendiente -> comprado -> entregado ---------- */
+// Se guarda dentro de cada premio canjeado (items[].estatus), tanto en el lote actual como en los lotes cerrados.
+const ESTATUS = ['pendiente', 'comprado', 'entregado'];
+const estatusValido = (v) => (ESTATUS.includes(v) ? v : 'pendiente');
+function leerEstatus(v) {
+  if (!ESTATUS.includes(v)) throw falla(400, 'Estatus no válido (pendiente, comprado o entregado)');
+  return v;
+}
+const itemsConEstatus = (items) => (Array.isArray(items) ? items : []).map((i) => ({ ...i, estatus: estatusValido(i.estatus) }));
+// Aplica el estatus a los premios de un trabajador: a uno (item = índice) o a todos (item = null).
+function marcarItems(items, item, estatus, quien) {
+  const fecha = new Date().toISOString();
+  let n = 0;
+  const nuevos = items.map((it, k) => {
+    if (item !== null && k !== item) return it;
+    n++;
+    return { ...it, estatus, estatusFecha: fecha, estatusPor: quien };
+  });
+  if (!n) throw falla(404, 'Ese premio ya no está en la lista. Recarga la página.');
+  return nuevos;
+}
+function leerItem(cuerpo) {
+  if (cuerpo.item == null || cuerpo.item === '') return null;
+  const n = Number(cuerpo.item);
+  if (!Number.isInteger(n) || n < 0) throw falla(400, 'Premio no válido');
+  return n;
+}
+
 /* ---------- lecturas ---------- */
 const filaPremio = (p) => ({
   id: p.id, nombre: p.nombre, puntos: p.puntos, max: p.max, activo: p.activo,
   foto: p.foto_v ? `/api/premios/${encodeURIComponent(p.id)}/foto?v=${p.foto_v}` : null,
 });
 const filaTrabajador = (t) => ({
-  id: t.id, nombre: t.nombre, puntos: t.puntos, items: t.items, usados: t.usados, restantes: t.restantes,
+  id: t.id, nombre: t.nombre, puntos: t.puntos, items: itemsConEstatus(t.items), usados: t.usados, restantes: t.restantes,
   fecha: new Date(t.fecha).toISOString(), registradoPor: t.registrado_por || undefined,
 });
 const filaLote = (l) => ({
   id: l.id, fecha: new Date(l.fecha).toISOString(), catalogo: l.catalogo,
-  trabajadores: l.trabajadores, premiosCol: l.premios_col, cerradoPor: l.cerrado_por || undefined,
+  trabajadores: l.trabajadores.map((t) => ({ ...t, items: itemsConEstatus(t.items) })), premiosCol: l.premios_col, cerradoPor: l.cerrado_por || undefined,
 });
 
 async function leerAnio(c = { query }) {
@@ -190,13 +218,21 @@ ruta('POST', '/api/lote', async ({ cuerpo, usuario }) => {
     if (!p) throw falla(409, 'Uno de los premios elegidos ya no está disponible. Recarga la página.');
     const cant = entero(i.cant, 1, 'Cantidad');
     if (p.max && cant > p.max) throw falla(400, `"${p.nombre}": máximo ${p.max} por persona`);
-    return { nombre: p.nombre, puntos: p.puntos, cant };
+    return { nombre: p.nombre, puntos: p.puntos, cant, estatus: 'pendiente' };
   });
   const usados = items.reduce((s, i) => s + i.puntos * i.cant, 0);
   if (usados <= 0) throw falla(400, 'Elige al menos un premio');
   if (usados > puntos) throw falla(400, 'Los puntos seleccionados superan los disponibles');
   const registro = [nombre, puntos, JSON.stringify(items), usados, puntos - usados, usuario.nombre];
   if (cuerpo.id) {
+    // Al editar, cada premio que se conserva mantiene su estatus (comprado / entregado).
+    const previo = await query('SELECT items FROM lote_actual WHERE id=$1', [String(cuerpo.id)]);
+    const antes = previo.rows[0]?.items || [];
+    items.forEach((i) => {
+      const a = antes.find((x) => x.nombre === i.nombre && x.puntos === i.puntos && x.estatus);
+      if (a) Object.assign(i, { estatus: a.estatus, estatusFecha: a.estatusFecha, estatusPor: a.estatusPor });
+    });
+    registro[2] = JSON.stringify(items);
     const u = await query(`UPDATE lote_actual SET nombre=$1, puntos=$2, items=$3, usados=$4, restantes=$5, registrado_por=$6, fecha=now()
                            WHERE id=$7`, [...registro, String(cuerpo.id)]);
     if (!u.rowCount) throw falla(404, 'Ese trabajador ya no está en el lote (¿se cerró el lote?)');
@@ -206,6 +242,19 @@ ruta('POST', '/api/lote', async ({ cuerpo, usuario }) => {
   await query(`INSERT INTO lote_actual (nombre, puntos, items, usados, restantes, registrado_por, id)
                VALUES ($1,$2,$3,$4,$5,$6,$7)`, [...registro, id]);
   return { id };
+});
+
+// Estatus en el lote actual: un premio (item = índice) o todos los premios de la persona.
+ruta('PATCH', '/api/lote/:id/estatus', async ({ params, cuerpo, usuario }) => {
+  const estatus = leerEstatus(cuerpo.estatus);
+  const item = leerItem(cuerpo);
+  return tx(async (c) => {
+    const r = await c.query('SELECT items FROM lote_actual WHERE id=$1 FOR UPDATE', [params.id]);
+    if (!r.rowCount) throw falla(404, 'Esa persona ya no está en el lote (¿se cerró el lote?)');
+    const items = marcarItems(r.rows[0].items, item, estatus, usuario.nombre);
+    await c.query('UPDATE lote_actual SET items=$1 WHERE id=$2', [JSON.stringify(items), params.id]);
+    return { ok: true };
+  });
 });
 
 ruta('DELETE', '/api/lote/:id', async ({ params }) => {
@@ -238,6 +287,26 @@ ruta('POST', '/api/lote/cerrar', async ({ usuario }) => tx(async (c) => {
 }));
 
 // --- historial ---
+// Estatus en un lote cerrado: un premio de una persona, todos los premios de una persona, o todo el lote.
+ruta('PATCH', '/api/historial/:id/estatus', async ({ params, cuerpo, usuario }) => {
+  const estatus = leerEstatus(cuerpo.estatus);
+  const tid = cuerpo.trabajador == null || cuerpo.trabajador === '' ? null : String(cuerpo.trabajador);
+  const item = tid === null ? null : leerItem(cuerpo);
+  return tx(async (c) => {
+    const r = await c.query('SELECT trabajadores FROM lotes WHERE id=$1 FOR UPDATE', [params.id]);
+    if (!r.rowCount) throw falla(404, 'Ese lote ya no existe');
+    let encontrado = false;
+    const trabajadores = r.rows[0].trabajadores.map((t) => {
+      if (tid !== null && t.id !== tid) return t;
+      encontrado = true;
+      return { ...t, items: marcarItems(t.items || [], item, estatus, usuario.nombre) };
+    });
+    if (!encontrado) throw falla(404, 'Esa persona ya no está en el lote');
+    await c.query('UPDATE lotes SET trabajadores=$1 WHERE id=$2', [JSON.stringify(trabajadores), params.id]);
+    return { ok: true };
+  });
+});
+
 ruta('DELETE', '/api/historial/:id', async ({ params, usuario }) => {
   requiereAdmin(usuario);
   await query('DELETE FROM lotes WHERE id=$1', [params.id]);
@@ -258,6 +327,9 @@ ruta('GET', '/api/respaldo', async () => {
 function limpiarItems(items) {
   return (Array.isArray(items) ? items : []).map((i) => ({
     nombre: texto(i.nombre), puntos: Number(i.puntos) || 0, cant: Number(i.cant) || 0,
+    estatus: estatusValido(i.estatus),
+    ...(i.estatusFecha ? { estatusFecha: texto(i.estatusFecha, 40) } : {}),
+    ...(i.estatusPor ? { estatusPor: texto(i.estatusPor, 80) } : {}),
   }));
 }
 function limpiarTrabajador(t) {
