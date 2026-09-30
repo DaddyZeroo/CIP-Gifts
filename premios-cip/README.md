@@ -52,6 +52,20 @@ Límite: el archivo debe pesar menos de 4 MB (límite de Vercel).
 
 ---
 
+## Estatus de compra y entrega
+
+Cada premio canjeado tiene su propio estatus, con código de colores tipo semáforo:
+
+| Estatus | Color | Significado |
+|---|---|---|
+| Pendiente | rojo claro | Falta comprar |
+| Comprado | amarillo | Ya se compró, falta entregar |
+| Entregado | verde | Ya se entregó a la persona |
+
+- Se cambia en **Canje → Lote actual** o en **Historial → Ver**, premio por premio. También se puede marcar todos los premios de una persona ("Todos") o todo un lote cerrado de una vez.
+- El Excel usa los mismos colores: en **Trabajadores** cada celda de premio va del color de su estatus (y hay columna "Estatus general"), **Detalle** colorea cada fila e incluye quién marcó y cuándo, y **Resumen premios** muestra cuántas unidades faltan por comprar, cuántas están compradas y cuántas entregadas.
+- No requiere migración: los datos anteriores aparecen como "Pendiente". El estatus se incluye en el respaldo .json.
+
 ## Correr con Docker (PC o servidor interno)
 
 Requisitos: Docker Desktop (Windows/Mac) o Docker Engine (Linux).
