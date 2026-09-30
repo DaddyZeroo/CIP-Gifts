@@ -115,6 +115,27 @@
   .login-caja .campo{margin-top:14px}
   .error{color:var(--rojo);font-size:14px;min-height:20px;margin-top:10px}
   .cargando{opacity:.6;pointer-events:none}
+
+  /* Estatus por premio (semáforo): pendiente -> comprado -> entregado. Mismos colores que en el Excel. */
+  .est{--f:#FFC7CE;--t:#9C0006}
+  .est.comprado{--f:#FFEB9C;--t:#9C5700}
+  .est.entregado{--f:#C6EFCE;--t:#006100}
+  .est.mixto{--f:#EDEBE9;--t:#5F5C5C}
+  select.est{appearance:none;-webkit-appearance:none;background-color:var(--f);color:var(--t);border:1px solid var(--t);border-radius:14px;padding:2px 22px 2px 9px;font-size:12px;font-weight:600;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 12px) 55%,calc(100% - 8px) 55%;background-size:4px 4px;background-repeat:no-repeat}
+  select.est:focus-visible{outline:2px solid var(--rojo);outline-offset:2px}
+  span.est{display:inline-block;background:var(--f);color:var(--t);border-radius:12px;padding:1px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+  .leyenda{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--gris);margin-bottom:10px}
+  .items-est{list-style:none;margin:0;padding:0;font-size:13px}
+  .items-est li{display:flex;align-items:flex-start;gap:8px;padding:2px 0}
+  .items-est li select{flex:none}
+  .items-est li span{flex:1;min-width:90px;padding-top:2px}
+  .todos{margin-top:6px}
+  #tablaLote .items-est li{flex-direction:column;gap:2px;margin-bottom:6px}
+  #tablaLote .items-est li span{min-width:0;padding-top:0}
+  tr.fila-est>td:first-child{border-left:4px solid var(--f)}
+  .conteos{display:flex;gap:4px;flex-wrap:wrap}
+  .marcar-todos{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 10px;font-size:13px;color:var(--gris)}
 </style>
 </head>
 <body>
@@ -170,6 +191,7 @@
 
     <div class="panel">
       <div class="encabezado"><h2>Lote actual</h2><span class="muted" id="loteConteo"></span></div>
+      <div class="leyenda">Estatus de cada premio: <span class="est">Pendiente</span><span class="est comprado">Comprado</span><span class="est entregado">Entregado</span></div>
       <div id="tablaLote"></div>
       <div class="acciones">
         <button class="btn principal" id="btnCerrar">Cerrar lote y descargar Excel</button>
@@ -206,7 +228,8 @@
 <!-- ===== HISTORIAL ===== -->
 <section class="vista" id="v-historial">
   <div class="panel">
-    <div class="encabezado"><h2>Lotes cerrados</h2><span class="muted">Puedes volver a descargar el Excel de cualquier lote.</span></div>
+    <div class="encabezado"><h2>Lotes cerrados</h2><span class="muted">Puedes volver a descargar el Excel de cualquier lote. Pulsa "Ver" para marcar qué premios ya se compraron y cuáles ya se entregaron.</span></div>
+    <div class="leyenda">Estatus de cada premio: <span class="est">Pendiente</span><span class="est comprado">Comprado</span><span class="est entregado">Entregado</span></div>
     <div id="tablaHistorial"></div>
   </div>
 </section>
@@ -215,15 +238,13 @@
 <section class="vista" id="v-respaldo">
   <div class="panel">
     <h2>Respaldo de la información</h2>
-    <p class="ok" style="margin-top:12px">La información (catálogo, lote actual, historial y fotos) se guarda en la base de datos del servidor y la comparten todos los usuarios. Aun así, conviene exportar un respaldo de vez en cuando y guardarlo en una carpeta segura de la empresa.</p>
     <div class="acciones">
       <button class="btn principal" id="btnExportar">Exportar respaldo (.json)</button>
       <label class="btn" for="inpImportar" style="display:inline-block">Importar respaldo</label>
       <input type="file" id="inpImportar" accept=".json,application/json" style="display:none">
     </div>
-    <p class="muted" style="margin-top:16px">Al importar, la información del archivo reemplaza la que hay en la base de datos (los usuarios no se modifican). También acepta los respaldos .json de la versión anterior que funcionaba en un solo archivo HTML.</p>
     <details style="margin-top:24px"><summary>Borrar toda la información</summary>
-      <div class="acciones"><button class="btn peligro" id="btnBorrarTodo">Borrar todo</button><span class="muted">Se restaura el catálogo inicial y se elimina el lote actual y el historial. Exporta un respaldo antes.</span></div>
+      <div class="acciones"><button class="btn peligro" id="btnBorrarTodo">Borrar todo</button></div>
     </details>
   </div>
 </section>
@@ -289,6 +310,27 @@ function confirmar(msg,textoSi){ return new Promise(res=>{ const m=$('#modal'); 
   const tecla=e=>{ if(e.key==='Escape') fin(false); };
   $('#modalSi').onclick=()=>fin(true); $('#modalNo').onclick=()=>fin(false); document.addEventListener('keydown',tecla); m.onclick=e=>{ if(e.target===m) fin(false); }; }); }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ---------- estatus por premio ---------- */
+const ESTATUS=[['pendiente','Pendiente'],['comprado','Comprado'],['entregado','Entregado']];
+const estNorm=e=>ESTATUS.some(x=>x[0]===e)?e:'pendiente';
+const estTxt=e=>ESTATUS.find(x=>x[0]===estNorm(e))[1];
+const estIdx=e=>ESTATUS.findIndex(x=>x[0]===estNorm(e));
+// Estatus general de una persona: el más atrasado de sus premios (si falta comprar uno, está "Pendiente").
+const estPersona=items=>items.length?ESTATUS[Math.min(...items.map(i=>estIdx(i.estatus)))][0]:'pendiente';
+const estUniforme=items=>items.every(i=>estNorm(i.estatus)===estNorm(items[0]?.estatus))?estNorm(items[0]?.estatus):null;
+function selectEst(valor,attrs,titulo,mixto){
+  return `<select class="est ${mixto?'mixto':valor}" ${attrs} title="${esc(titulo)}">${mixto?'<option value="" selected disabled>Varios</option>':''}${ESTATUS.map(([v,n])=>`<option value="${v}"${!mixto&&v===valor?' selected':''}>${n}</option>`).join('')}</select>`;
+}
+// Lista de premios de una persona, cada uno con su selector de estatus.
+function itemsConEstatus(t,attrs){
+  return `<ul class="items-est">${t.items.map((i,k)=>{ const e=estNorm(i.estatus);
+    const titulo=i.estatusPor?`${estTxt(e)} · marcó ${i.estatusPor}${i.estatusFecha?' el '+fechaTxt(i.estatusFecha):''}`:'Estatus de este premio';
+    return `<li>${selectEst(e,`${attrs} data-item="${k}" aria-label="Estatus de ${esc(i.nombre)}"`,titulo)}<span>${i.cant>1?i.cant+' × ':''}${esc(i.nombre)}</span></li>`; }).join('')}</ul>`;
+}
+// Selector para marcar todos los premios de la persona a la vez.
+function selectTodos(t,attrs){ const u=estUniforme(t.items); return selectEst(u,`${attrs} aria-label="Todos los premios de ${esc(t.nombre)}"`,'Marcar todos los premios de esta persona',!u); }
+// Unidades por estatus en una lista de trabajadores.
+function conteoEstatus(ts){ const c={pendiente:0,comprado:0,entregado:0}; ts.forEach(t=>t.items.forEach(i=>c[estNorm(i.estatus)]+=i.cant)); return c; }
 function fechaTxt(iso){ const d=new Date(iso); return d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}); }
 function fechaArchivo(iso){ const d=new Date(iso); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
 function descargar(nombre, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500); }
@@ -358,17 +400,17 @@ $('#btnAgregar').addEventListener('click',async()=>{
     items:Object.entries(seleccion).map(([premioId,cant])=>({premioId,cant})) };
   const editaba=!!editandoId;
   $('#btnAgregar').disabled=true;
-  const r=await accion(()=>api('POST','/api/lote',cuerpo), editaba?'Cambios guardados':'Trabajador agregado al lote');
+  const r=await accion(()=>api('POST','/api/lote',cuerpo), editaba?'Cambios guardados':'Persona agregada al lote');
   if(r) limpiarForm(); else renderCanje();
 });
 
 function renderLote(){
-  $('#loteConteo').textContent = D.lote.length? `${D.lote.length} trabajador${D.lote.length!==1?'es':''}` : '';
+  $('#loteConteo').textContent = D.lote.length? `${D.lote.length} persona${D.lote.length!==1?'s':''}` : '';
   const c=$('#tablaLote');
-  if(!D.lote.length){ c.innerHTML='<p class="vacio">Aún no hay trabajadores en este lote.</p>'; }
-  else c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Trabajador</th><th>Premios</th><th class="num">Usados</th><th class="num">Quedan</th><th></th></tr></thead><tbody>${
-    D.lote.map(t=>`<tr${editandoId===t.id?' style="background:var(--rojo-suave)"':''}><td><b>${esc(t.nombre)}</b><br><span class="muted">${t.puntos} pts iniciales${t.registradoPor?` · capturó ${esc(t.registradoPor)}`:''}</span></td>
-      <td><ul class="lista-items">${t.items.map(i=>`<li>${i.cant>1?i.cant+' × ':''}${esc(i.nombre)}</li>`).join('')}</ul></td>
+  if(!D.lote.length){ c.innerHTML='<p class="vacio">Aún no hay personas en este lote.</p>'; }
+  else c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Persona</th><th>Premios y estatus</th><th class="num">Usados</th><th class="num">Quedan</th><th></th></tr></thead><tbody>${
+    D.lote.map(t=>`<tr class="fila-est est ${estPersona(t.items)}"${editandoId===t.id?' style="background:var(--rojo-suave)"':''}><td><b>${esc(t.nombre)}</b><br><span class="muted">${t.puntos} pts iniciales${t.registradoPor?` · capturó ${esc(t.registradoPor)}`:''}</span>${t.items.length>1?`<div class="todos muted">Todos: ${selectTodos(t,`data-estlote="${esc(t.id)}"`)}</div>`:''}</td>
+      <td>${itemsConEstatus(t,`data-estlote="${esc(t.id)}"`)}</td>
       <td class="num">${t.usados}</td><td class="num">${t.restantes}</td>
       <td style="white-space:nowrap"><button class="btn chico" data-editar="${esc(t.id)}">Editar</button> <button class="btn chico" data-quitar="${esc(t.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table></div>`;
   $('#btnCerrar').disabled=$('#btnExcelParcial').disabled=$('#btnVaciar').disabled=!D.lote.length;
@@ -384,12 +426,19 @@ $('#tablaLote').addEventListener('click',async e=>{
     toast(perdidos.length?`Editando. No se pudo cargar: ${perdidos.join(', ')} (ya no está en el catálogo)`:'Editando: corrige y pulsa "Guardar cambios"');
     return; }
   const b=e.target.closest('[data-quitar]'); if(!b) return;
-  if(!await confirmar('¿Eliminar a este trabajador del lote?','Eliminar')) return;
+  if(!await confirmar('¿Eliminar a esta persona del lote?','Eliminar')) return;
   const id=b.dataset.quitar; if(editandoId===id) limpiarForm();
-  await accion(()=>api('DELETE','/api/lote/'+encodeURIComponent(id)),'Trabajador eliminado del lote');
+  await accion(()=>api('DELETE','/api/lote/'+encodeURIComponent(id)),'Persona eliminada del lote');
+});
+$('#tablaLote').addEventListener('change',e=>{
+  const s=e.target.closest('[data-estlote]'); if(!s||!s.value) return;
+  const cuerpo={estatus:s.value}; if(s.dataset.item!==undefined) cuerpo.item=Number(s.dataset.item);
+  s.className='est '+s.value;
+  accion(()=>api('PATCH',`/api/lote/${encodeURIComponent(s.dataset.estlote)}/estatus`,cuerpo),
+    s.dataset.item!==undefined?`Premio marcado como ${estTxt(s.value)}`:`Todos sus premios: ${estTxt(s.value)}`);
 });
 $('#btnVaciar').addEventListener('click',async()=>{
-  if(!await confirmar(`Se eliminarán los ${D.lote.length} trabajador(es) del lote actual sin generar Excel. ¿Continuar?`,'Vaciar lote')) return;
+  if(!await confirmar(`Se eliminarán las ${D.lote.length} persona(s) del lote actual sin generar Excel. ¿Continuar?`,'Vaciar lote')) return;
   limpiarForm(); await accion(()=>api('DELETE','/api/lote'),'Lote vaciado');
 });
 $('#btnExcelParcial').addEventListener('click',()=>{
@@ -397,7 +446,7 @@ $('#btnExcelParcial').addEventListener('click',()=>{
   descargar(`Canje_${fechaArchivo(l.fecha)}_parcial.xlsx`, excelDeLote(l)); toast('Excel descargado');
 });
 $('#btnCerrar').addEventListener('click',async()=>{
-  if(!await confirmar(`Se cerrará el lote con ${D.lote.length} trabajador(es), se descargará el Excel y el lote pasará al historial. ¿Continuar?`,'Cerrar lote')) return;
+  if(!await confirmar(`Se cerrará el lote con ${D.lote.length} persona(s), se descargará el Excel y el lote pasará al historial. ¿Continuar?`,'Cerrar lote')) return;
   const l=await accion(()=>api('POST','/api/lote/cerrar'),'Lote cerrado y Excel descargado');
   if(l){ limpiarForm(); descargar(`Canje_${fechaArchivo(l.fecha)}.xlsx`, excelDeLote(l)); }
 });
@@ -492,17 +541,33 @@ function renderHistorial(){
   const c=$('#tablaHistorial');
   if(!D.historial.length){ c.innerHTML='<p class="vacio">Todavía no hay lotes cerrados.</p>'; return; }
   const abiertos=[...c.querySelectorAll('tr[id^="det-"]')].filter(x=>x.style.display!=='none').map(x=>x.id);
-  c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Fecha de cierre</th><th>Catálogo</th><th class="num">Trabajadores</th><th class="num">Puntos canjeados</th><th></th></tr></thead><tbody>${
-    D.historial.map(l=>{ const id=esc(l.id); return `<tr><td>${fechaTxt(l.fecha)}${l.cerradoPor?`<br><span class="muted">cerró ${esc(l.cerradoPor)}</span>`:''}</td><td>${esc(l.catalogo)}</td><td class="num">${l.trabajadores.length}</td><td class="num">${l.trabajadores.reduce((s,t)=>s+t.usados,0)}</td>
+  c.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Fecha de cierre</th><th>Catálogo</th><th class="num">Trabajadores</th><th class="num">Puntos canjeados</th><th>Premios (unidades)</th><th></th></tr></thead><tbody>${
+    D.historial.map(l=>{ const id=esc(l.id); const k=conteoEstatus(l.trabajadores); const total=k.pendiente+k.comprado+k.entregado;
+      return `<tr><td>${fechaTxt(l.fecha)}${l.cerradoPor?`<br><span class="muted">cerró ${esc(l.cerradoPor)}</span>`:''}</td><td>${esc(l.catalogo)}</td><td class="num">${l.trabajadores.length}</td><td class="num">${l.trabajadores.reduce((s,t)=>s+t.usados,0)}</td>
+      <td><div class="conteos">${total&&k.entregado===total?'<span class="est entregado">Todo entregado</span>':ESTATUS.filter(([v])=>k[v]).map(([v,n])=>`<span class="est ${v}">${k[v]} ${n.toLowerCase()}${k[v]!==1?'s':''}</span>`).join('')}</div></td>
       <td style="white-space:nowrap"><button class="btn chico principal" data-xlsx="${id}">Descargar Excel</button> <button class="btn chico" data-ver="${id}">Ver</button> <button class="btn chico" data-elim="${id}">Eliminar</button></td></tr>
-      <tr id="det-${id}" style="display:${abiertos.includes('det-'+l.id)?'':'none'}"><td colspan="5"><table><thead><tr><th>Trabajador</th><th>Premios</th><th class="num">Iniciales</th><th class="num">Usados</th><th class="num">Quedan</th></tr></thead><tbody>${
-        l.trabajadores.map(t=>`<tr><td>${esc(t.nombre)}</td><td>${t.items.map(i=>`${i.cant>1?i.cant+' × ':''}${esc(i.nombre)}`).join(', ')}</td><td class="num">${t.puntos}</td><td class="num">${t.usados}</td><td class="num">${t.restantes}</td></tr>`).join('')}</tbody></table></td></tr>`; }).join('')}</tbody></table></div>`;
+      <tr id="det-${id}" style="display:${abiertos.includes('det-'+l.id)?'':'none'}"><td colspan="6">
+        <div class="marcar-todos">Marcar todo el lote como: ${ESTATUS.map(([v,n])=>`<button class="btn chico" data-todos="${v}" data-lote="${id}">${n}</button>`).join('')}</div>
+        <table><thead><tr><th>Trabajador</th><th>Premios y estatus</th><th class="num">Iniciales</th><th class="num">Usados</th><th class="num">Quedan</th><th>Todos</th></tr></thead><tbody>${
+        l.trabajadores.map(t=>{ const a=`data-esthist="${id}" data-trab="${esc(t.id)}"`; return `<tr class="fila-est est ${estPersona(t.items)}"><td>${esc(t.nombre)}</td><td>${itemsConEstatus(t,a)}</td><td class="num">${t.puntos}</td><td class="num">${t.usados}</td><td class="num">${t.restantes}</td>
+          <td>${selectTodos(t,a)}</td></tr>`; }).join('')}</tbody></table></td></tr>`; }).join('')}</tbody></table></div>`;
 }
 $('#tablaHistorial').addEventListener('click',async e=>{
   const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.todos){ const l=D.historial.find(x=>x.id===b.dataset.lote); if(!l) return;
+    if(!await confirmar(`¿Marcar todos los premios de las ${l.trabajadores.length} persona(s) de este lote como "${estTxt(b.dataset.todos)}"?`,'Marcar')) return;
+    accion(()=>api('PATCH',`/api/historial/${encodeURIComponent(l.id)}/estatus`,{estatus:b.dataset.todos}),`Lote marcado como ${estTxt(b.dataset.todos)}`); return; }
   if(b.dataset.xlsx){ const l=D.historial.find(x=>x.id===b.dataset.xlsx); if(!l) return; descargar(`Canje_${fechaArchivo(l.fecha)}.xlsx`, excelDeLote(l)); toast('Excel descargado'); }
   if(b.dataset.ver){ const d=document.getElementById('det-'+b.dataset.ver); d.style.display=d.style.display==='none'?'':'none'; }
   if(b.dataset.elim){ if(await confirmar('¿Eliminar este lote del historial? No podrás volver a descargar su Excel.','Eliminar')){ accion(()=>api('DELETE','/api/historial/'+encodeURIComponent(b.dataset.elim)),'Lote eliminado'); } }
+});
+
+$('#tablaHistorial').addEventListener('change',e=>{
+  const s=e.target.closest('[data-esthist]'); if(!s||!s.value) return;
+  const cuerpo={estatus:s.value,trabajador:s.dataset.trab}; if(s.dataset.item!==undefined) cuerpo.item=Number(s.dataset.item);
+  s.className='est '+s.value;
+  accion(()=>api('PATCH',`/api/historial/${encodeURIComponent(s.dataset.esthist)}/estatus`,cuerpo),
+    s.dataset.item!==undefined?`Premio marcado como ${estTxt(s.value)}`:`Todos sus premios: ${estTxt(s.value)}`);
 });
 
 /* ==================== RESPALDO ==================== */
@@ -552,27 +617,45 @@ $('#btnNuevoUsuario').addEventListener('click',async()=>{
 });
 
 /* ==================== EXCEL (generador .xlsx sin librerías) ==================== */
+// Estilos del Excel para cada estatus (índices de cellXfs en styles.xml): 3 pendiente, 4 comprado, 5 entregado.
+const EST_XF={pendiente:3,comprado:4,entregado:5};
 function excelDeLote(l){
   // Columnas de premios: catálogo guardado al cerrar el lote (o el actual), más cualquier premio canjeado que ya no esté.
   const base=(l.premiosCol||D.premios.filter(p=>p.activo)).map(p=>({n:p.nombre,p:p.puntos}));
   l.trabajadores.forEach(t=>t.items.forEach(i=>{ if(!base.some(b=>b.n===i.nombre&&b.p===i.puntos)) base.push({n:i.nombre,p:i.puntos}); }));
   const cols=base.sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n));
-  const cab=['Fecha de cierre','Catálogo','Trabajador','Puntos iniciales',...cols.map(c=>`${c.n} (${c.p} pts)`),'Puntos usados','Puntos restantes'];
-  const hoja1=[cab, ...l.trabajadores.map(t=>[fechaTxt(l.fecha),l.catalogo,t.nombre,t.puntos,
-    ...cols.map(c=>{ const it=t.items.find(i=>i.nombre===c.n&&i.puntos===c.p); return it?it.cant:null; }),t.usados,t.restantes])];
-  const hoja2=[['Trabajador','Premio','Costo (pts)','Cantidad','Subtotal (pts)']];
-  l.trabajadores.forEach(t=>t.items.forEach(i=>hoja2.push([t.nombre,i.nombre,i.puntos,i.cant,i.puntos*i.cant])));
-  const tot={}; l.trabajadores.forEach(t=>t.items.forEach(i=>{ const k=i.nombre+'|'+i.puntos; tot[k]=tot[k]||{n:i.nombre,p:i.puntos,c:0}; tot[k].c+=i.cant; }));
-  const hoja3=[['Premio','Costo (pts)','Unidades entregadas','Puntos totales'], ...Object.values(tot).sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n)).map(x=>[x.n,x.p,x.c,x.p*x.c])];
-  hoja3.push(['Total','',hoja3.slice(1).reduce((s,r)=>s+r[2],0),hoja3.slice(1).reduce((s,r)=>s+r[3],0)]);
-  return xlsx([{nombre:'Trabajadores',filas:hoja1,anchos:[17,17,28,10,...cols.map(()=>13),10,10],congelar:'E2',altoCab:48},{nombre:'Detalle',filas:hoja2,anchos:[30,45,11,10,13]},{nombre:'Resumen premios',filas:hoja3,anchos:[45,11,19,14]}]);
+  const c=(v,e)=>({v,s:EST_XF[estNorm(e)]}); // celda coloreada según el estatus
+  // Estatus general de la persona: "Entregado" solo si ya se entregó todo; si no, el más atrasado.
+  const general=t=>{ const u=estUniforme(t.items); return u?estTxt(u):`${estTxt(estPersona(t.items))} (parcial)`; };
+  // Hoja 1: cada celda de premio lleva el color de SU estatus; los premios no elegidos siguen en gris (null).
+  const cab=['Fecha de cierre','Catálogo','Trabajador','Estatus general','Puntos iniciales',...cols.map(k=>`${k.n} (${k.p} pts)`),'Puntos usados','Puntos restantes'];
+  const hoja1=[cab, ...l.trabajadores.map(t=>[fechaTxt(l.fecha),l.catalogo,t.nombre,c(general(t),estPersona(t.items)),t.puntos,
+    ...cols.map(k=>{ const it=t.items.find(i=>i.nombre===k.n&&i.puntos===k.p); return it?c(it.cant,it.estatus):null; }),t.usados,t.restantes])];
+  // Hoja 2: una fila por premio canjeado, coloreada con su estatus.
+  const hoja2=[['Trabajador','Premio','Costo (pts)','Cantidad','Subtotal (pts)','Estatus','Marcó','Fecha del estatus']];
+  l.trabajadores.forEach(t=>t.items.forEach(i=>{ const e=i.estatus;
+    hoja2.push([c(t.nombre,e),c(i.nombre,e),c(i.puntos,e),c(i.cant,e),c(i.puntos*i.cant,e),c(estTxt(e),e),c(i.estatusPor||'',e),c(i.estatusFecha?fechaTxt(i.estatusFecha):'',e)]); }));
+  // Hoja 3: unidades por premio y cuántas faltan por comprar / entregar.
+  const tot={}; l.trabajadores.forEach(t=>t.items.forEach(i=>{ const k=i.nombre+'|'+i.puntos; tot[k]=tot[k]||{n:i.nombre,p:i.puntos,c:0,pendiente:0,comprado:0,entregado:0}; tot[k].c+=i.cant; tot[k][estNorm(i.estatus)]+=i.cant; }));
+  const filas3=Object.values(tot).sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n));
+  const est3=(n,e)=>n?{v:n,s:EST_XF[e]}:0;
+  const suma=k=>filas3.reduce((s,x)=>s+x[k],0);
+  const hoja3=[['Premio','Costo (pts)','Unidades canjeadas','Pendientes de compra','Compradas (por entregar)','Entregadas','Puntos totales'],
+    ...filas3.map(x=>[x.n,x.p,x.c,est3(x.pendiente,'pendiente'),est3(x.comprado,'comprado'),est3(x.entregado,'entregado'),x.p*x.c]),
+    ['Total','',suma('c'),suma('pendiente'),suma('comprado'),suma('entregado'),filas3.reduce((s,x)=>s+x.p*x.c,0)],
+    [],['Leyenda de colores'],
+    ...ESTATUS.map(([v,n])=>[{v:n,s:EST_XF[v]},v==='pendiente'?'Falta comprar':v==='comprado'?'Ya se compró, falta entregar':'Ya se entregó a la persona'])];
+  return xlsx([{nombre:'Trabajadores',filas:hoja1,anchos:[17,17,28,20,10,...cols.map(()=>13),10,10],congelar:'F2',altoCab:48},
+    {nombre:'Detalle',filas:hoja2,anchos:[30,45,11,10,13,12,18,17]},
+    {nombre:'Resumen premios',filas:hoja3,anchos:[45,11,13,13,15,12,14],altoCab:32}]);
 }
 function xlsx(hojas){
   const xe=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const col=n=>{ let s=''; n++; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
   const hojaXml=h=>{
     const cols=h.anchos?`<cols>${h.anchos.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`:'';
-    const filas=h.filas.map((f,r)=>`<row r="${r+1}"${r===0&&h.altoCab?` ht="${h.altoCab}" customHeight="1"`:''}>${f.map((v,c)=>{ const ref=col(c)+(r+1); const st=r===0?' s="1"':'';
+    const filas=h.filas.map((f,r)=>`<row r="${r+1}"${r===0&&h.altoCab?` ht="${h.altoCab}" customHeight="1"`:''}>${f.map((v,c)=>{ const ref=col(c)+(r+1); let st=r===0?' s="1"':'';
+      if(v&&typeof v==='object'){ st=` s="${v.s}"`; v=v.v; if(v===''){ return `<c r="${ref}"${st}/>`; } }
       if(typeof v==='number') return `<c r="${ref}"${st}><v>${v}</v></c>`;
       if(v===null) return `<c r="${ref}" s="2"/>`;
       if(v===''||v==null) return '';
@@ -584,7 +667,7 @@ function xlsx(hojas){
     ['_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
     ['xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${hojas.map((h,i)=>`<sheet name="${xe(h.nombre)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`],
     ['xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${hojas.map((h,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${hojas.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
-    ['xl/styles.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB3121B"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment wrapText="1" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="0" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ['xl/styles.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="5"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><sz val="11"/><color rgb="FF9C0006"/><name val="Calibri"/></font><font><sz val="11"/><color rgb="FF9C5700"/><name val="Calibri"/></font><font><sz val="11"/><color rgb="FF006100"/><name val="Calibri"/></font></fonts><fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB3121B"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFC7CE"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFEB9C"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC6EFCE"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFFFFFFF"/></left><right style="thin"><color rgb="FFFFFFFF"/></right><top style="thin"><color rgb="FFFFFFFF"/></top><bottom style="thin"><color rgb="FFFFFFFF"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment wrapText="1" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="0" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="3" fillId="5" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="4" fillId="6" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
     ...hojas.map((h,i)=>[`xl/worksheets/sheet${i+1}.xml`,hojaXml(h)])
   ];
   return zip(archivos);
